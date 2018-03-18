@@ -11,8 +11,9 @@ public class JavaScriptController extends Controller {
 				routes.javascript.ContestUIController.editContest(),
 				routes.javascript.ContestUIController.contestResults(),
 
-				routes.javascript.UserApiController.getUsers(),
-				routes.javascript.UserApiController.createUser(),
+				routes.javascript.UserUIController.users(),
+
+				routes.javascript.UserApiController.getUsers(), routes.javascript.UserApiController.createUser(),
 
 				routes.javascript.ContestApiController.getEntries(), routes.javascript.ContestApiController.getEntry(),
 				routes.javascript.ContestApiController.voteEntry(),

@@ -16,6 +16,7 @@ GET     /contests/:contestId/entries/:entryId              controllers.ContestUI
 
 # User UI
 GET /users                                                 controllers.UserUIController.users
+GET /users/new                                             controllers.UserUIController.newUser
 
 # API
 GET     /api/contests/:id                                  controllers.ContestApiController.getContest(id: Int)

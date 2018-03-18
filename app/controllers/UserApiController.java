@@ -13,11 +13,10 @@ import java.util.regex.Pattern;
 import javax.inject.Inject;
 
 import org.apache.http.HttpEntity;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -114,21 +113,21 @@ public class UserApiController extends Controller {
 					} else {
 						name = json.get("nickname").asText();
 					}
+				} finally {
+					EntityUtils.consume(entity);
 				}
 			} catch (IOException e) {
 				Logger.error(e.getMessage(), e);
 				return internalServerError(jsonMsg("Internal server error"));
 			}
 
-			User newUser = null;
 			try {
-				newUser = user.createUser(name, kaid, UserLevel.MEMBER);
+				User newUser = user.createUser(name, kaid, UserLevel.MEMBER);
+				return newUser == null ? badRequest(jsonMsg("That user already exists")) : ok(newUser.asJson());
 			} catch (SQLException e) {
 				Logger.error(e.getMessage(), e);
 				return internalServerError(jsonMsg("Internal server error"));
 			}
-
-			return newUser == null ? badRequest(jsonMsg("That user already exists")) : ok(newUser.asJson());
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 }

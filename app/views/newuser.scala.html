@@ -1,0 +1,23 @@
+@import models.User
+@import models.UserLevel
+@import scala.collection.immutable.List
+
+@(user: User) 
+
+@standardpage("Add User", List(routes.Assets.versioned("stylesheets/new-user.css").url), List(routes.Assets.versioned("javascripts/components.js").url, routes.Assets.versioned("javascripts/new-user.js").url), user) {
+	<h2>Add User</h2>
+	<form id="add-user">
+		<div>
+			<div class="mdl-textfield mdl-js-textfield">
+				<input class="mdl-textfield__input" type="text" pattern="(?:kaid_)?(\d{20,30})" id="new-user-kaid" required>
+				<label class="mdl-textfield__label" for="new-user-kaid">User KAID</label>
+				<span class="mdl-textfield__error">Invalid KAID</span>
+			</div>
+		</div>
+		<div class="mdl-card__actions submit-actions">
+			<input type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" value="Create user">
+		</div>
+		<p id="error"></p>
+		<p id="success"></p>
+	</form>
+}

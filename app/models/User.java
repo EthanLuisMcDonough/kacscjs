@@ -20,7 +20,6 @@ import java.util.Set;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import play.Logger;
 import play.libs.Json;
 import play.mvc.Http.Session;
 
@@ -283,7 +282,7 @@ public class User {
 	/**
 	 * Creates a user
 	 * 
-	 * @return The created user
+	 * @return The created user or null if the user already exists
 	 * 
 	 * @param connection
 	 *            The SQL connection that will be used
@@ -303,41 +302,48 @@ public class User {
 		user.setLevel(level);
 
 		try (PreparedStatement checkStmt = connection
-				.prepareStatement("SELECT id, level FROM users WHERE kaid = ? LIMIT 1")) {
-			checkStmt.setString(1, user.getKaid());
-			try (ResultSet checkResult = checkStmt.executeQuery()) {
-				if (checkResult.next()) {
-					if (checkResult.getInt("level") == UserLevel.REMOVED.ordinal()) {
-						user.setId(checkResult.getInt("id"));
-						try (PreparedStatement update = connection
-								.prepareStatement("UPDATE user SET level = ? WHERE id = ")) {
-							update.setInt(1, user.getId());
-							update.setInt(2, user.getLevel().ordinal());
-							update.executeUpdate();
-							return user;
-						}
-					} else {
-						Logger.error(checkResult.getInt("level") + "");
-						return null;
-					}
-				} else {
-					try (PreparedStatement stmt = connection.prepareStatement(
-							"INSERT INTO users (kaid, level, name) VALUES (?, ?, ?)",
-							Statement.RETURN_GENERATED_KEYS)) {
-						stmt.setString(1, user.getKaid());
-						stmt.setInt(2, user.getLevel().ordinal());
-						stmt.setString(3, user.getName());
-						stmt.executeUpdate();
+				.prepareStatement("SELECT COUNT(*) AS cnt FROM users WHERE level > ? AND kaid = ? LIMIT 1")) {
+			checkStmt.setInt(1, UserLevel.REMOVED.ordinal());
+			checkStmt.setString(2, user.getKaid());
+			try (ResultSet results = checkStmt.executeQuery()) {
+				if (results.next() && results.getInt("cnt") > 0) {
+					return null;
+				}
+			}
+		}
 
-						try (ResultSet keys = stmt.getGeneratedKeys()) {
-							if (keys != null && keys.next())
-								user.setId(keys.getInt(1));
-						}
+		try (PreparedStatement checkStmt = connection
+				.prepareStatement("SELECT id, level FROM users WHERE kaid = ? AND level = ? LIMIT 1")) {
+			checkStmt.setString(1, user.getKaid());
+			checkStmt.setInt(2, UserLevel.REMOVED.ordinal());
+			try (ResultSet results = checkStmt.executeQuery()) {
+				if (results.next()) {
+					user.setId(results.getInt("id"));
+					try (PreparedStatement update = connection
+							.prepareStatement("UPDATE users SET level = ? WHERE id = ? LIMIT 1")) {
+						update.setInt(1, level.ordinal());
+						update.setInt(2, user.getId());
+						update.executeUpdate();
 						return user;
 					}
 				}
 			}
 		}
+
+		try (PreparedStatement stmt = connection.prepareStatement(
+				"INSERT INTO users (kaid, level, name) VALUES (?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+			stmt.setString(1, user.getKaid());
+			stmt.setInt(2, user.getLevel().ordinal());
+			stmt.setString(3, user.getName());
+			stmt.executeUpdate();
+
+			try (ResultSet keys = stmt.getGeneratedKeys()) {
+				if (keys != null && keys.next())
+					user.setId(keys.getInt(1));
+			}
+		}
+
+		return user;
 	}
 
 	/**
@@ -355,11 +361,9 @@ public class User {
 	 * @throws SQLException
 	 */
 	public User createUser(String name, String kaid, UserLevel level) throws SQLException {
-		User user = null;
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			createUser(connection, name, kaid, level);
+			return createUser(connection, name, kaid, level);
 		}
-		return user;
 	}
 
 	/**
@@ -422,5 +426,10 @@ public class User {
 
 	public void setLevel(UserLevel level) {
 		this.level = level;
+	}
+
+	public String toString() {
+		return "user[id = " + getId() + " | kaid = " + getKaid() + " | level = " + getLevel() + " | name = " + getName()
+				+ "]";
 	}
 }

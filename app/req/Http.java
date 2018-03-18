@@ -14,6 +14,6 @@ public class Http {
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> manager.close()));
 	}
 
-	public static final CloseableHttpClient client = HttpClientBuilder.create().setConnectionTimeToLive(5L, TimeUnit.SECONDS)
-			.setConnectionManager(manager).build();
+	public static final CloseableHttpClient client = HttpClientBuilder.create()
+			.setConnectionTimeToLive(5L, TimeUnit.SECONDS).setConnectionManager(manager).build();
 }
