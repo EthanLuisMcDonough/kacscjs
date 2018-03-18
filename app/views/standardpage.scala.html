@@ -1,0 +1,24 @@
+@import models.User
+@import scala.collection.immutable.List
+
+@(title: String, styles: List[String] = List(), scripts: List[String] = List(), user: User = null)(content: Html)
+
+@templStyles= @{List(routes.Assets.versioned("stylesheets/standard-page.css").url)}
+@templScripts = @{List()}
+
+@**********************************************************************************
+ * Based off of the MDL article template                                          *
+ * https://github.com/google/material-design-lite/tree/mdl-1.x/templates/article  *
+ **********************************************************************************@
+
+@main(title, templStyles ::: styles, templScripts ::: scripts, user) {
+	<main class="mdl-layout__content standard-page">
+		<div class="mdl-grid">
+			<div class="mdl-cell mdl-cell--2-col mdl-cell--hide-tablet mdl-cell--hide-phone"></div>
+			<div class="mdl-color--white mdl-shadow--4dp content mdl-color-text--grey-800 mdl-cell mdl-cell--8-col">
+				@content
+			</div>
+		</div>
+	</main>
+	@footer()
+}

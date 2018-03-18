@@ -1,0 +1,79 @@
+@import models.User
+@import models.UserLevel
+@import scala.collection.immutable.List
+
+@(title: String, styles: List[String] = List(), scripts: List[String] = List(), user: User = null, bodyClasses: String = "")(content: Html)
+
+@projectTitle = {KACSCJS}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    		<title>@title</title>
+    		<style>
+    			@@font-face {
+    				font-family: 'Material Icons';
+    				font-style: normal;
+    				font-weight: 400;
+    				src: url(@routes.Assets.versioned("lib/material-design-icons/MaterialIcons-Regular.eot"));
+    				src: local('Material Icons'), 
+    					local('MaterialIcons-Regular'), 
+    					url(@routes.Assets.versioned("lib/material-design-icons/MaterialIcons-Regular.woff2")) format('woff2'),
+    					url(@routes.Assets.versioned("lib/material-design-icons/MaterialIcons-Regular.woff")) format('woff'),
+    					url(@routes.Assets.versioned("lib/material-design-icons/MaterialIcons-Regular.ttf")) format('truetype');
+    			}
+        </style>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/material-design-lite/material.min.css")">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/material-design-lite/material.min.css")">
+        <script src="@routes.Assets.versioned("lib/material-design-lite/material.min.js")"></script>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("libraries/dialog-polyfill.min.css")">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/material-design-icons/material-icons.css")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
+        @for(style <- styles) {
+        		<link rel="stylesheet" type="text/css" href="@style">
+        }
+        <script src="@routes.Assets.versioned("libraries/handlebars.min.js")"></script>
+    </head>
+    <body class="@bodyClasses">
+    		<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+    			<header class="mdl-layout__header">
+				<div class="mdl-layout__header-row">
+					<span class="mdl-layout-title">@projectTitle</span>
+					<div class="mdl-layout-spacer"></div>
+				</div>
+			</header>
+			<div class="mdl-layout__drawer">
+				<span class="mdl-layout-title">@projectTitle</span>
+				<nav class="mdl-navigation">
+					@if(user == null) {
+						<a class="mdl-navigation__link" href="@routes.LoginController.getAuthURL">Log in</a>
+					} else {
+						<a class="mdl-navigation__link" href="@routes.ContestUIController.contests">Contests</a>
+						@if(user.getLevel().ordinal >= models.UserLevel.ADMIN.ordinal) {
+							<a class="mdl-navigation__link" href="@routes.ContestUIController.newContest">New Contest</a>
+							<a class="mdl-navigation__link" href="@routes.UserUIController.users">Manage users</a> 
+						}
+						<a class="mdl-navigation__link" href="@routes.LoginController.logout">Log out</a> 
+					}		
+				</nav>
+			</div>
+    			@content
+    		</div>
+    		<script src="@routes.JavaScriptController.jsRoutes" type="text/javascript"></script>
+    		<script src="@routes.JavaScriptController.userLevelJS" type="text/javascript"></script>
+    		<script src="@routes.Assets.versioned("libraries/dialog-polyfill.min.js")"></script>
+    		<script src="@routes.Assets.versioned("libraries/es6-promise.auto.min.js")"></script>
+    		<script src="@routes.Assets.versioned("libraries/fetch-polyfill.min.js")" type="text/javascript"></script>
+    		<script src="@routes.Assets.versioned("javascripts/components.js")" type="text/javascript"></script>
+    		@if(user != null) {
+    			<script src="@routes.JavaScriptController.userJs" type="text/javascript"></script>    			
+    		}
+        <script src="@routes.Assets.versioned("javascripts/main.js")" type="text/javascript"></script>
+        @for(script <- scripts) {
+        		<script src="@script" type="text/javascript"></script>
+        }
+    </body>
+</html>

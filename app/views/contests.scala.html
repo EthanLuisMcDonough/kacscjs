@@ -1,0 +1,33 @@
+@import models.User
+@import models.UserLevel
+@import scala.collection.immutable.List
+
+@(user: User)
+
+@main("Contests", List(routes.Assets.versioned("libraries/pikaday.min.css").url, routes.Assets.versioned("stylesheets/contests.css").url), List(routes.Assets.versioned("libraries/pikaday.min.js").url, routes.Assets.versioned("javascripts/contests-page.js").url), user, "template-text-only") {
+	<main class="mdl-layout__content">
+		@if(user.getLevel() == UserLevel.ADMIN) {
+			<a href="@routes.ContestUIController.newContest().url">
+				<button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="add">
+					<i class="material-icons" role="presentation">add</i> 
+					<span class="visuallyhidden">New contest</span>
+				</button>
+			</a>
+		}
+		<div class="mdl-layout__tab-panel is-active">
+			<div id="contests">
+				<section class="section--center mdl-grid mdl-grid--no-spacing mdl-shadow--2dp" id="no-contests">
+					<div class="mdl-card mdl-cell mdl-cell--12-col">
+						<div class="mdl-card__supporting-text">
+							<h4>None</h4>There aren't any contests here yet.
+						</div>
+					</div>
+				</section>
+			</div>
+			<section class="section--center mdl-grid mdl-grid--no-spacing" id="load-more-section">
+				<button type="button" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" id="load-more">Load more</button>
+			</section>
+		</div>
+	</main>
+	@footer()
+}

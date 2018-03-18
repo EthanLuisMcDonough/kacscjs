@@ -1,0 +1,40 @@
+#program {
+	width: 100%;
+	border: none;
+	min-height: 400px;
+}
+
+.slider-area label, .slider-area input[type="range"] {
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+
+.slider-area label {
+	font-style: oblique;
+	text-size: 60%;
+}
+
+#submit {
+	max-width: 800px;
+	margin: 0 auto;
+	margin-top: 10px;
+}
+
+#submit table {
+	width: 100%;
+}
+
+.feedback {
+	width: 100%;
+}
+
+.criterion {
+	text-decoration: none;
+	border-bottom: 1px dotted currentColor;
+	font-size: 125%;
+}
+
+.buttons-area {
+	margin: 0 20px;
+}

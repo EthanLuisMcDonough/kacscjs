@@ -1,0 +1,42 @@
+# Home
+GET     /                                                  controllers.HomeController.index
+
+# Login flow
+GET	    /login                                             controllers.LoginController.getAuthURL
+GET	    /logout                                            controllers.LoginController.logout
+GET     /OAuthCallback/:token                              controllers.LoginController.login(token: String)
+
+# Contests UI
+GET     /contests                                          controllers.ContestUIController.contests
+GET     /contests/new                                      controllers.ContestUIController.newContest
+GET     /contests/:id                                      controllers.ContestUIController.contest(id: Int)
+GET     /contests/:id/edit                                 controllers.ContestUIController.editContest(id: Int)
+GET     /contests/:id/results                              controllers.ContestUIController.contestResults(id: Int)
+GET     /contests/:contestId/entries/:entryId              controllers.ContestUIController.entry(contestId: Int, entryId: Int)
+
+# User UI
+GET /users                                                 controllers.UserUIController.users
+
+# API
+GET     /api/contests/:id                                  controllers.ContestApiController.getContest(id: Int)
+GET     /api/contests/:page/:limit                         controllers.ContestApiController.getContests(page: Int, limit: Int)
+GET     /api/contests/:id/entries/:page/:limit/all         controllers.ContestApiController.getAllEntries(id: Int, page: Int, limit: Int)
+GET     /api/contests/:id/entries/:page/:limit             controllers.ContestApiController.getEntries(id: Int, page: Int, limit: Int)
+GET     /api/contests/:id/entries/random                   controllers.ContestApiController.randomEntry(id: Int)
+GET     /api/contests/:contestId/entries/:entryId          controllers.ContestApiController.getEntry(contestId: Int, entryId: Int)
+GET     /api/contests/:id/results/:page/:limit             controllers.ContestApiController.entryScores(id: Int, page: Int, limit: Int)
+POST    /api/contests                                      controllers.ContestApiController.createContest
+PUT     /api/contests/:id/entries/:programId               controllers.ContestApiController.newEntry(id: Int, programId: Long)
+DELETE  /api/contests/:id/entries/:entryId                 controllers.ContestApiController.newEntry(id: Int, entryId: Long)
+DELETE  /api/contests/:id                                  controllers.ContestApiController.deleteContest(id: Int)
+PUT     /api/contests/:contestId/entries/:entryId/vote     controllers.ContestApiController.voteEntry(contestId: Int, entryId: Int)
+PUT     /api/users/:kaid                                   controllers.UserApiController.createUser(kaid: String)
+GET     /api/users/:page/:limit                            controllers.UserApiController.getUsers(page: Int, limit: Int)
+
+# Resources and JS
+GET     /assets/*file                                      controllers.Assets.versioned(path="/public", file: Asset)
+GET     /jsRoutes                                          controllers.JavaScriptController.jsRoutes
+GET     /UserLevel.js                                      controllers.JavaScriptController.userLevelJS
+GET     /userJs                                            controllers.JavaScriptController.userJs
+GET     /define-contest/:id                                controllers.JavaScriptController.defineContest(id: Int)
+GET     /define-entry/:id                                  controllers.JavaScriptController.defineEntry(id: Int)

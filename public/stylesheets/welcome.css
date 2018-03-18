@@ -1,0 +1,24 @@
+.welcome-wrapper {
+	width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-wrapper .mdl-card__title-text {
+	font-size: 5em;
+}
+
+.welcome-wrapper .mdl-card__title {
+	padding-top: 25px;
+    padding-bottom: 25px;
+}
+
+.welcome-wrapper .mdl-card {
+	min-width: 400px;
+}
+
+.mdl-mini-footer {
+	z-index: 2;
+}

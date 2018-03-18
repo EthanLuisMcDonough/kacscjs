@@ -1,0 +1,8 @@
+@import models.User
+@import scala.collection.immutable.List
+
+@(id: Int, user: User)
+
+@standardpage("Contest " + id, List(routes.Assets.versioned("stylesheets/contest-overview.css").url), List(routes.JavaScriptController.defineContest(id).url, routes.Assets.versioned("javascripts/contest-overview.js").url), user) {
+	<div id="contest-div"></div>
+}

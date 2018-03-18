@@ -1,0 +1,17 @@
+@import models.User
+@import scala.collection.immutable.List
+
+@(contest: Int, entry: Int, user: User)
+
+@standardone("Entry #" + entry, List(routes.Assets.versioned("stylesheets/entry.css").url), List(routes.JavaScriptController.defineContest(contest).url, routes.JavaScriptController.defineEntry(entry).url, routes.Assets.versioned("javascripts/entry.js").url), user) {
+	<div id="area-body">
+		<h1>Entry #@entry</h1>
+		<p id="loading">Loading...</p>
+		
+		<div id="entry-live-editor"></div>
+		
+		<form id="submit-entry">
+			
+		</form>
+	</div>
+}

@@ -1,0 +1,15 @@
+.s-select {
+    font-family: "roboto", "arial", sans-serif;
+    text-transform: uppercase;
+    padding: 3px 100px 3px 10px;
+    font-size: 100%;
+    -webkit-appearance: none; 
+    -moz-appearance: none;
+    appearance: none;
+    background: url("data:image/png;base64,R0lGODlhDwAUAIABAAAAAP///yH5BAEAAAEALAAAAAAPABQAAAIXjI+py+0Po5wH2HsXzmw//lHiSJZmUAAAOw==") no-repeat 90% 50%;
+    border: none;
+    border-bottom: 1px dotted #999999;
+}
+.s-select:focus {
+    outline: none;
+}

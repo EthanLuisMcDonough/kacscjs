@@ -1,0 +1,32 @@
+#no-contests {
+	display: none;
+}
+
+.new-contest-fieldset {
+	min-height: auto;
+	padding: 10px 2%;
+	width: auto;
+}
+
+.new-contest-fieldset h3 {
+	margin: 24px 0 12px 0;
+}
+
+.new-contest-fieldset table {
+	margin-bottom: 10px;
+}
+
+.brackets-list {
+	padding: 0;
+	margin: 0;
+	margin-bottom: 10px;
+}
+
+.brackets-list .mdl-list__item-icon,
+#criteria .material-icons {
+	cursor: pointer;
+}
+
+.submit-actions {
+	padding-top: 10px;
+}

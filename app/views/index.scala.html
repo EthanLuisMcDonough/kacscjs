@@ -1,0 +1,18 @@
+@import scala.collection.immutable.List
+
+@()
+
+@main("KACSCJS", List(routes.Assets.versioned("stylesheets/welcome.css").url)) {
+	<div class="welcome-wrapper">
+		<div class="mdl-card mdl-shadow--2dp">
+			<div class="mdl-card__title">
+				<h1 class="mdl-card__title-text">KACSCJS</h1>
+			</div>
+			<div class="mdl-card__actions mdl-card--border">
+				<a class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" href="@routes.LoginController.getAuthURL">Log in with Khan Academy</a>
+			</div>
+		</div>
+	</div>
+	@footer()
+}
+

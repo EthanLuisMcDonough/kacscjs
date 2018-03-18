@@ -1,0 +1,17 @@
+node_modules
+target
+logs
+public/javascripts
+app/configs/PrivateConfig.java
+*.jar
+*.class
+build
+bin
+gradlew
+project/project
+project/target
+.settings
+.project
+.gradle
+.classpath
+.g8

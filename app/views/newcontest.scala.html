@@ -1,0 +1,81 @@
+@import models.User
+@import scala.collection.immutable.List
+
+@(user: User)
+
+@standardone("Contests", List(routes.Assets.versioned("libraries/pikaday.min.css").url, routes.Assets.versioned("stylesheets/new-contest.css").url), List(routes.Assets.versioned("libraries/pikaday.min.js").url, routes.Assets.versioned("javascripts/new-contest.js").url), user) {
+	<h1>New Contest</h1>
+	<form id="create-contest">
+		<div class="new-contest-fieldset mdl-card">
+			<h3>Basic info</h3>
+			<div>
+				<div class="mdl-textfield mdl-js-textfield">
+					<input class="mdl-textfield__input" type="text" id="contest-name-field" maxlength="255" required>
+					<label class="mdl-textfield__label" for="contest-name-field">Name</label>
+				</div>
+			</div>
+			<div>
+				<div class="mdl-textfield mdl-js-textfield">
+					<textarea class="mdl-textfield__input" type="text" rows="3" id="contest-description-field" maxlength="500" required></textarea>
+					<label class="mdl-textfield__label" for="contest-description-field">Description</label>
+				</div>
+			</div>
+			<div>
+				<div class="mdl-textfield mdl-js-textfield">
+					<input class="mdl-textfield__input" type="text" pattern="\d{10,16}" id="contest-program-id-field" required>
+					<label class="mdl-textfield__label" for="contest-program-id-field">Contest program ID</label>
+					<span class="mdl-textfield__error">Invalid program ID</span>
+				</div>
+			</div>
+			<div>
+				<div class="mdl-textfield mdl-js-textfield">
+					<input class="mdl-textfield__input" type="text" id="contest-end-date-field" required>
+					<label class="mdl-textfield__label" for="contest-end-date-field">End date (your current time zone)</label>
+				</div>
+			</div>
+			<div>
+				<div class="mdl-textfield mdl-js-textfield">
+					<input class="mdl-textfield__input" type="text" pattern="(2[0-3]|[01]\d):([0-5]\d)" id="contest-end-time-field" required>
+					<label class="mdl-textfield__label" for="contest-end-time-field">End time (00:00 - 23:59)</label>
+					<span class="mdl-textfield__error">Invalid time formatting</span>
+				</div>
+			</div>
+		</div>
+		<div class="new-contest-fieldset mdl-card">
+			<h3>Criteria</h3>
+			<table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp">
+				<thead>
+					<tr>
+						<th class="mdl-data-table__cell--non-numeric">Name</th>
+						<th>Description</th>
+						<th>Weight percentage</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody id="criteria">
+					
+				</tbody>
+			</table>
+			<div class="mdl-card__actions">
+				<a class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" href="#0" id="add-criterion">Add criterion</a>
+			</div>
+		</div>
+		<div class="new-contest-fieldset mdl-card">
+			<h3>Brackets</h3>
+			<ul class="mdl-list brackets-list" id="brackets">
+				
+			</ul>
+			<div class="mdl-card__actions">
+				<a class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" href="#0" id="add-bracket">Add bracket</a>
+			</div>
+		</div>
+		<div class="new-contest-fieldset mdl-card" id="judges-card">
+			<h3>Judges</h3>
+			
+		</div>
+		<div class="mdl-card__actions submit-actions">
+			<input type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" value="Create contest">
+		</div>
+		<p id="form-error"></p>
+	</form>
+}
