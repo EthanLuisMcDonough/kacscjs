@@ -12,3 +12,15 @@
 	-ms-transform: translateX(-50%) translateY(-50%);
 	-o-transform: translateX(-50%) translateY(-50%);
 }
+
+.button-div {
+	margin: 10px 5px;
+}
+
+.button-div button {
+	margin: 7px 5px;
+}
+
+.mdl-layout__obfuscator.is-visible, .mdl-layout__drawer.is-visible {
+	position: fixed;
+}

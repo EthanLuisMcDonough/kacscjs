@@ -32,6 +32,8 @@ DELETE  /api/contests/:id/entries/:entryId                 controllers.ContestAp
 DELETE  /api/contests/:id                                  controllers.ContestApiController.deleteContest(id: Int)
 PUT     /api/contests/:contestId/entries/:entryId/vote     controllers.ContestApiController.voteEntry(contestId: Int, entryId: Int)
 PUT     /api/users/:kaid                                   controllers.UserApiController.createUser(kaid: String)
+DELETE  /api/users/:id                                     controllers.UserApiController.removeUser(id: Int)
+PATCH   /api/users/:id/promote                             controllers.UserApiController.promoteUser(id: Int)
 GET     /api/users/:page/:limit                            controllers.UserApiController.getUsers(page: Int, limit: Int)
 
 # Resources and JS

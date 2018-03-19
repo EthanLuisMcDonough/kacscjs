@@ -4,8 +4,8 @@
 
 @(user: User) 
 
-@standardpage("Users", List(routes.Assets.versioned("stylesheets/users.css").url), List(routes.Assets.versioned("javascripts/components.js").url, routes.Assets.versioned("javascripts/users-list.js").url), user) {
+@standardpage("Users", List(), List(routes.Assets.versioned("javascripts/components.js").url, routes.Assets.versioned("javascripts/users-list.js").url), user) {
 	<h2>Users</h2>
-	
+	<div id="users-area"></div>
 	
 }

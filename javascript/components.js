@@ -442,3 +442,33 @@ const MDLMenu = class MDLMenu extends Component {
 		componentHandler.upgradeElement(this.contextMenu);
 	}
 }
+
+const PageIterator = class PageIterator {
+	constructor(getRoute, limit = 10) {
+		this.page = 0;
+		this.limit = limit;
+		if (typeof getRoute == "function") 
+			this.getRoute = getRoute;
+		else 
+			throw new TypeError("getSet must be a function that returns a route");
+	}
+	next() {
+		return new Promise((res, rej) => {
+			const route = this.getRoute(this.page++, this.limit);
+			fetch(route.url, {
+				method: route.method,
+				headers: {
+					"X-Requested-With": "fetch",
+					[CSRF_HEADER]: CSRF_TOKEN
+				},
+				credentials: "same-origin"
+			}).then(response => response.status >= 200 && response.status < 300 ? 
+					response.json() : Promise.reject(response)).then(data => {
+						res({
+							value: data,
+							done: data.length < this.limit
+						});
+			}).catch(rej);
+		})
+	}
+}

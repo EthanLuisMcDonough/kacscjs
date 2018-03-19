@@ -180,7 +180,10 @@ public class User {
 			User user = null;
 			try (PreparedStatement stmt = connection
 					.prepareStatement(String.format("SELECT * FROM users WHERE %s = ? LIMIT 1", type.toString()))) {
-				stmt.setString(1, id);
+				if (type == UserIdType.KAID)
+					stmt.setString(1, id);
+				else
+					stmt.setInt(1, Integer.parseInt(id));
 				try (ResultSet results = stmt.executeQuery()) {
 					if (results.next()) {
 						user = new User();
@@ -219,8 +222,8 @@ public class User {
 	 * 
 	 * @throws SQLException
 	 */
-	public static User getUserById(String id) throws SQLException {
-		return getUser(UserIdType.ID, id);
+	public static User getUserById(int id) throws SQLException {
+		return getUser(UserIdType.ID, String.valueOf(id));
 	}
 
 	/**
