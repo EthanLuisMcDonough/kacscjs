@@ -1,9 +1,19 @@
 package models;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import play.libs.Json;
+
+import static configs.PrivateConfig.CONNECTION_STRING;
+import static configs.PrivateConfig.USERNAME;
+import static configs.PrivateConfig.PASSWORD;
 
 public class Entry {
 	private long programId = -1;
@@ -47,6 +57,20 @@ public class Entry {
 		this.hasBeenJudged = hasBeenJudged;
 	}
 
+	public void realSetBracket(Bracket b) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			try (PreparedStatement stmt = connection.prepareStatement("UPDATE entries SET bracket_id = ? WHERE id = ? LIMIT 1")) {
+				if (b == null)
+					stmt.setNull(1, Types.INTEGER);
+				else 
+					stmt.setInt(1, b.getId());
+				stmt.setInt(2, getId());
+				stmt.executeUpdate();
+			}
+		}
+		setBracket(b);
+	}
+	
 	public JsonNode asJson() {
 		ObjectNode json = Json.newObject();
 		json.put("id", getId());

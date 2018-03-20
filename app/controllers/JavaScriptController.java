@@ -18,6 +18,7 @@ public class JavaScriptController extends Controller {
 				routes.javascript.UserApiController.removeUser(),
 				routes.javascript.UserApiController.promoteUser(),
 				
+				routes.javascript.ContestApiController.setBracket(),
 				routes.javascript.ContestApiController.getEntries(), routes.javascript.ContestApiController.getEntry(),
 				routes.javascript.ContestApiController.voteEntry(),
 				routes.javascript.ContestApiController.createContest(),
@@ -25,7 +26,8 @@ public class JavaScriptController extends Controller {
 				routes.javascript.ContestApiController.deleteContest(),
 				routes.javascript.ContestApiController.getContest(),
 				routes.javascript.ContestApiController.randomEntry(),
-				routes.javascript.ContestApiController.entryScores()));
+				routes.javascript.ContestApiController.entryScores(),
+				routes.javascript.ContestApiController.deleteEntry()));
 	}
 
 	public Result userJs() {

@@ -1,6 +1,6 @@
 (() => {
 	const userManager = (() => {
-		const limit = 100;
+		const limit = 10;
 		const iterator = new PageIterator((page, limit) => jsRoutes.controllers.UserApiController.getUsers(page, limit), limit);
 		
 		const content = document.getElementById("users-area");

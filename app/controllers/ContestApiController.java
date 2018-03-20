@@ -243,6 +243,60 @@ public class ContestApiController extends Controller {
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 
+	public CompletionStage<Result> setBracket(int contestId, int entryId) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+			
+			if (user == null) {
+				return unauthorized();
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden();
+			}
+			
+			if(!request().hasBody()) {
+				return badRequest();
+			}
+			
+			JsonNode body = request().body().asJson();
+			
+			if(body == null || body.isNull()) {
+				return badRequest();
+			}
+			
+			JsonNode bracketJson = body.get("bracket");
+			
+			if (!bracketJson.isNull() && !bracketJson.isInt()) {
+				return badRequest();
+			}
+			
+			Integer bracketId = bracketJson.isNull() ? null :  bracketJson.asInt();
+			
+			try {
+				Contest contest = user.getContestById(contestId);
+				if (contest == null) {
+					return notFound();
+				}
+				
+				Entry entry = contest.getEntry(entryId);
+				if (entry == null) {
+					return notFound();
+				}
+				
+				Bracket bracket = bracketId == null ? null : contest.getBracket(bracketId);
+				if (bracket == null && bracketId != null) {
+					return notFound();
+				}
+				
+				entry.realSetBracket(bracket);
+			} catch (SQLException e) {
+				Logger.error("Error", e);
+				return internalServerError();
+			}
+			
+			return ok("");
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+	
 	public CompletionStage<Result> randomEntry(int contestId) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -311,42 +365,6 @@ public class ContestApiController extends Controller {
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 
-	public CompletionStage<Result> getAllEntries(int id, int page, int limit) {
-		return CompletableFuture.supplyAsync(() -> {
-			User user = User.getFromSession(session());
-
-			if (user == null) {
-				return unauthorized(jsonMsg("Unauthorized"));
-			} else if (user.getLevel().ordinal() < UserLevel.MEMBER.ordinal()) {
-				return forbidden(jsonMsg("Forbidden"));
-			}
-
-			try {
-				ArrayNode jsonEntries = Json.newArray();
-
-				Contest contest = user.getContestById(id);
-
-				if (contest == null) {
-					return notFound(jsonMsg(String.format("A contest with the id %d does not exist", id)));
-				} else if (!contest.getJudgeIds().contains(user.getId())
-						&& user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
-					return forbidden(jsonMsg("You're not a judge of this contest"));
-				}
-
-				List<Entry> entries = contest.getAllContestEntries(page, limit);
-
-				Iterator<Entry> entryIter = entries.iterator();
-				while (entryIter.hasNext())
-					jsonEntries.add(entryIter.next().asJson());
-
-				return ok(jsonEntries);
-			} catch (SQLException e) {
-				Logger.error(e.getMessage(), e);
-				return internalServerError(jsonMsg("Internal server error"));
-			}
-		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
-	}
-
 	public CompletionStage<Result> getEntries(int id, int page, int limit) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -369,7 +387,7 @@ public class ContestApiController extends Controller {
 					return forbidden(jsonMsg("You're not a judge of this contest"));
 				}
 
-				List<Entry> entries = contest.getContestEntries(page, limit);
+				List<Entry> entries = contest.getAllContestEntries(page, limit);
 
 				Iterator<Entry> entryIter = entries.iterator();
 				while (entryIter.hasNext())

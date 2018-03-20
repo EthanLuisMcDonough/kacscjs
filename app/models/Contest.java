@@ -334,6 +334,24 @@ public class Contest {
 		return contest;
 	}
 
+	public Bracket getBracket(int id) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			try (PreparedStatement fetch = connection.prepareStatement("SELECT name FROM brackets WHERE id = ? AND contest_id = ? LIMIT 1")) {
+				fetch.setInt(1, id);
+				fetch.setInt(2, getId());
+				try (ResultSet results = fetch.executeQuery()) {
+					if(results.next()) {
+						Bracket b = new Bracket();
+						b.setId(id);
+						b.setName(results.getString("name"));
+						return b;
+					}
+				}
+			}
+		}
+		return null;
+	}
+	
 	/**
 	 * Returns whether or not the contest can be judged by a user
 	 *
@@ -426,7 +444,7 @@ public class Contest {
 				Entry entry = new Entry();
 				entry.setId(entriesResults.getInt("id"));
 				entry.setProgramId(entriesResults.getLong("program_id"));
-
+				
 				Bracket bracket = null;
 				String bracketName = entriesResults.getString("bracket_name");
 				if (bracketName != null) {
@@ -435,7 +453,9 @@ public class Contest {
 					bracket.setName(entriesResults.getString("bracket_name"));
 				}
 				entry.setBracket(bracket);
-
+				
+				entry.setHasBeenJudged(entriesResults.getInt("has_judged") != 0);
+				
 				entries.add(entry);
 			}
 			return entries;
@@ -457,10 +477,15 @@ public class Contest {
 	public List<Entry> getAllContestEntries(int page, int limit) throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			try (PreparedStatement fetchEntriesStmt = connection.prepareStatement(
-					"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, brackets.name AS bracket_name FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id WHERE entries.contest_id = ? LIMIT ?, ?")) {
-				fetchEntriesStmt.setInt(1, getId());
-				fetchEntriesStmt.setInt(2, page * limit);
-				fetchEntriesStmt.setInt(3, limit);
+					"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name \n" +  
+					"FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n" + 
+					"LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n" + 
+					"WHERE entries.contest_id = ? \n"+ 
+					"LIMIT ?, ?")) {
+				fetchEntriesStmt.setInt(1, getFetcher().getId());
+				fetchEntriesStmt.setInt(2, getId());
+				fetchEntriesStmt.setInt(3, page * limit);
+				fetchEntriesStmt.setInt(4, limit);
 				return entryStatementHelper(fetchEntriesStmt);
 			}
 		}
@@ -485,7 +510,10 @@ public class Contest {
 						int lowerBound = idBounds.getInt("min_id"), upperBound = idBounds.getInt("max_id");
 						int randIndex = generator.nextInt(upperBound - lowerBound + 1) + lowerBound;
 						try (PreparedStatement getEntryStmt = connection.prepareStatement(
-								"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, brackets.name AS bracket_name FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? WHERE entries.contest_id = ? AND feedback.id IS NULL AND entries.id >= ? LIMIT 1")) {
+								"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name\n" +  
+								"FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n" + 
+								"LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n" + 
+								"WHERE entries.contest_id = ? AND feedback.id IS NULL AND entries.id >= ? LIMIT 1")) {
 							getEntryStmt.setInt(1, getFetcher().getId());
 							getEntryStmt.setInt(2, getId());
 							getEntryStmt.setInt(3, randIndex);
@@ -496,33 +524,6 @@ public class Contest {
 						return null;
 					}
 				}
-			}
-		}
-	}
-
-	/**
-	 * Gets all contest entries that a judge hasn't judged yet
-	 *
-	 * @return A list of Entry objects
-	 *
-	 * @param page
-	 *            The starting page
-	 * @param limit
-	 *            The number of entries per page
-	 * @param user
-	 *            The user
-	 * 
-	 * @throws SQLException
-	 */
-	public List<Entry> getContestEntries(int page, int limit) throws SQLException {
-		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			try (PreparedStatement fetchEntriesStmt = connection.prepareStatement(
-					"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, brackets.name AS bracket_name FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? WHERE entries.contest_id = ? AND feedback.id IS NULL LIMIT ?, ?")) {
-				fetchEntriesStmt.setInt(1, getFetcher().getId());
-				fetchEntriesStmt.setInt(2, getId());
-				fetchEntriesStmt.setInt(3, page * limit);
-				fetchEntriesStmt.setInt(4, limit);
-				return entryStatementHelper(fetchEntriesStmt);
 			}
 		}
 	}

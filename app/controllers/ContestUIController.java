@@ -44,4 +44,11 @@ public class ContestUIController extends Controller {
 				? forbidden(views.html.error403.render())
 				: ok(views.html.contestresults.render(id, user));
 	}
+	
+	public Result entries(int id) {
+		User user = User.getFromSession(session());
+		return user == null || user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()
+				? forbidden(views.html.error403.render())
+				: ok(views.html.entries.render(user, id));
+	}
 }

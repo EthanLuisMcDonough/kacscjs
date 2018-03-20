@@ -1,0 +1,11 @@
+@import models.User
+@import models.UserLevel
+@import scala.collection.immutable.List
+
+@(user: User, contestId: Int) 
+
+@standardpage(s"Entries for contest #$contestId", List(), List(routes.Assets.versioned("javascripts/components.js").url, routes.JavaScriptController.defineContest(contestId).url, routes.Assets.versioned("javascripts/entries-list.js").url), user) {
+	<div id="entries-area">
+		<h2>Entries for contest #@contestId</h2>
+	</div>
+}
