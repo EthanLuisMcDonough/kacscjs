@@ -10,7 +10,8 @@ public class JavaScriptController extends Controller {
 		return ok(JavaScriptReverseRouter.create("jsRoutes", routes.javascript.ContestUIController.contest(),
 				routes.javascript.ContestUIController.editContest(),
 				routes.javascript.ContestUIController.contestResults(),
-
+				routes.javascript.ContestUIController.entries(),
+				
 				routes.javascript.UserUIController.newUser(),
 				routes.javascript.UserUIController.users(),
 				

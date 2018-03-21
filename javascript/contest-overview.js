@@ -74,7 +74,7 @@
 			
 			const manageBtn = new MDLAccentRippleBtn("Manage Entries");
 			manageBtn.addOnClick(e => {
-				alert("MANAGE");
+				window.location.replace(jsRoutes.controllers.ContestUIController.entries(CONTEST_ID).url);
 			});
 			manageBtn.appendTo(buttonDiv);
 		}

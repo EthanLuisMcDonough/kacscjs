@@ -472,3 +472,47 @@ const PageIterator = class PageIterator {
 		})
 	}
 }
+
+const IteratorTable = class IteratorTable extends Component {
+	constructor(table, iterator, itemCallback, otherButtons = []) {
+		super(table);
+		this.table = table;
+		this.iterator = iterator;
+		this.itemCallback = itemCallback;
+		this.loadMore = new MDLAccentRippleBtn("Load more");
+		this.otherButtons = otherButtons;
+		
+		this.loadMore.addOnClick(e => {
+			this.loadMore.disable();
+			this.next().then(data => this.loadMore[data.done ? "remove" : "enable"]()).catch(console.error);
+		});
+	}
+	init() {
+		this.next().then(data => {
+			if(!data.done)
+				this.loadMore.appendTo(this.buttons);
+			this.otherButtons.forEach(e => {
+				if (e instanceof Component)
+					e.appendTo(this.buttons);
+				else if (e instanceof Element)
+					this.buttons.appendChild(e);
+			});
+		})
+	}
+	insertItems(data) {
+		data.value.forEach(this.itemCallback.bind(this));
+		return data;
+	}
+	next() {
+		return this.iterator.next().then(this.insertItems.bind(this));
+	}
+	generateDom(table) {
+		const area = document.createElement("div");
+		table.appendTo(area);
+		const buttons = document.createElement("div");
+		buttons.className = "button-div";
+		this.buttons = buttons;
+		area.appendChild(buttons);
+		return area;
+	}
+} 
