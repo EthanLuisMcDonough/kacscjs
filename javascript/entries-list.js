@@ -8,6 +8,9 @@
 		
 		const entryIds = {};
 		
+		const addEntry = new MDLAccentRippleBtn("Add entry");
+		const allSpinOffs = new MDLAccentRippleBtn("Add all spin-offs");
+		
 		const homeButton = new MDLAccentRippleBtn("Back");
 		homeButton.addOnClick(e => {
 			window.location.href = jsRoutes.controllers.ContestUIController.contest(CONTEST_ID).url;
@@ -76,13 +79,96 @@
 			}
 		}
 		
-		return new IteratorTable(new MDLTable([
+		const iTable = new IteratorTable(new MDLTable([
 			"Thumbnail",
 			"Entry ID",
 			"Program ID",
 			"Bracket", 
 			"Remove"
-		]), iterator, forEachItem, [ homeButton ]);
+		]), iterator, forEachItem, [ addEntry, allSpinOffs, homeButton ]);
+		
+		const addProgramDialogDiv = document.createElement("div");
+		const programIdInput = new MDLTextfield("Program ID", true, "\\d{9,16}", "Invalid program ID");
+		programIdInput.appendTo(addProgramDialogDiv);
+		const programIdInputErrorText = document.createElement("p");
+		programIdInputErrorText.className = "error";
+		addProgramDialogDiv.appendChild(programIdInputErrorText);
+		let addProgramEnabled = true;
+		
+		const addEntryDialog = new MDLDialog("Add an entry", addProgramDialogDiv, [
+			{
+				label: "Cancel",
+				onClick() {
+					addEntryDialog.close();
+				}
+			},
+			{
+				label: "Add entry",
+				color: "#00b200",
+				onClick() {
+					if (addProgramEnabled) {
+						programIdInputErrorText.textContent = "";
+						addProgramEnabled = false;
+						const route = jsRoutes.controllers.ContestApiController.newEntry(CONTEST_ID, programIdInput.getTextContent());
+						fetch(route.url, {
+							method: route.method,
+							headers: {
+								"X-Requested-With": "fetch",
+								[CSRF_HEADER]: CSRF_TOKEN
+							},
+							credentials: "same-origin"
+						}).then(response => response.status >= 200 && response.status < 300 ? response.json() : Promise.reject(response)).then(data => {
+							iTable.insertItems([data]);
+							addEntryDialog.close();
+							addProgramEnabled = true;
+						}).catch(e => {
+							console.error(e);
+							programIdInputErrorText.textConent = e.message ? e.message : "Error";
+							addProgramEnabled = true;
+						})
+					}
+				},
+			}
+		]);
+		addEntryDialog.appendTo(document.body);
+		
+		const spinOffErrorDialog = new MDLDialog(
+			"Error", 
+			"There was an issue adding the contest's spin-offs.  Check the debugger console for more info.", 
+			[
+				{ 
+					label: "Ok",
+					onClick() {
+						spinOffErrorDialog.close();
+					}
+				}
+			]
+		);
+		spinOffErrorDialog.appendTo(document.body);
+		
+		addEntry.addOnClick(addEntryDialog.showModal.bind(addEntryDialog));
+		
+		allSpinOffs.addOnClick(e => {
+			allSpinOffs.disable();
+			const route = jsRoutes.controllers.ContestApiController.addAllSpinOffs(CONTEST_ID);
+			fetch(route.url, {
+				method: route.method,
+				headers: {
+					"X-Requested-With": "fetch",
+					[CSRF_HEADER]: CSRF_TOKEN
+				},
+				credentials: "same-origin"
+			}).then(response => response.status >= 200 && response.status < 300 ? response.json() : Promise.reject(response)).then(data => {
+				allSpinOffs.enable();
+				iTable.insertItems(data);
+			}).catch(e => {
+				console.error(e);
+				allSpinOffs.enable();
+				spinOffErrorDialog.showModal();
+			})
+		});
+		
+		return iTable;
 	})();
 	
 	const contestRoute = jsRoutes.controllers.ContestApiController.getContest(CONTEST_ID);

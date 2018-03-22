@@ -28,6 +28,7 @@ GET     /api/contests/:contestId/entries/:entryId          controllers.ContestAp
 GET     /api/contests/:id/results/:page/:limit             controllers.ContestApiController.entryScores(id: Int, page: Int, limit: Int)
 POST    /api/contests                                      controllers.ContestApiController.createContest
 PUT     /api/contests/:id/entries/:programId               controllers.ContestApiController.newEntry(id: Int, programId: Long)
+POST    /api/contests/:id/entries/addallspinoffs           controllers.ContestApiController.addAllSpinOffs(id: Int)
 DELETE  /api/contests/:id/entries/:entryId                 controllers.ContestApiController.deleteEntry(id: Int, entryId: Int)
 PATCH   /api/contests/:contestId/entries/:entryId          controllers.ContestApiController.setBracket(contestId: Int, entryId: Int)
 DELETE  /api/contests/:id                                  controllers.ContestApiController.deleteContest(id: Int)

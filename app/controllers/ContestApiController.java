@@ -34,6 +34,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -44,10 +45,14 @@ import models.Entry;
 import models.Bracket;
 import models.Contest;
 import models.EntryFinalResult;
+import models.InsertedEntry;
+import req.Http;
+import req.ArrayListExceptions;
+import req.SpinOffIter;
 
 public class ContestApiController extends Controller {
 	private HttpExecutionContext httpExecutionContext;
-	private final CloseableHttpClient httpclient = req.Http.client;
+	private final CloseableHttpClient httpclient = Http.client;
 
 	@Inject
 	public ContestApiController(HttpExecutionContext ec) {
@@ -246,57 +251,57 @@ public class ContestApiController extends Controller {
 	public CompletionStage<Result> setBracket(int contestId, int entryId) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
-			
+
 			if (user == null) {
 				return unauthorized();
 			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 				return forbidden();
 			}
-			
-			if(!request().hasBody()) {
+
+			if (!request().hasBody()) {
 				return badRequest();
 			}
-			
+
 			JsonNode body = request().body().asJson();
-			
-			if(body == null || body.isNull()) {
+
+			if (body == null || body.isNull()) {
 				return badRequest();
 			}
-			
+
 			JsonNode bracketJson = body.get("bracket");
-			
+
 			if (!bracketJson.isNull() && !bracketJson.isInt()) {
 				return badRequest();
 			}
-			
-			Integer bracketId = bracketJson.isNull() ? null :  bracketJson.asInt();
-			
+
+			Integer bracketId = bracketJson.isNull() ? null : bracketJson.asInt();
+
 			try {
 				Contest contest = user.getContestById(contestId);
 				if (contest == null) {
 					return notFound();
 				}
-				
+
 				Entry entry = contest.getEntry(entryId);
 				if (entry == null) {
 					return notFound();
 				}
-				
+
 				Bracket bracket = bracketId == null ? null : contest.getBracket(bracketId);
 				if (bracket == null && bracketId != null) {
 					return notFound();
 				}
-				
+
 				entry.realSetBracket(bracket);
 			} catch (SQLException e) {
 				Logger.error("Error", e);
 				return internalServerError();
 			}
-			
+
 			return ok("");
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> randomEntry(int contestId) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -487,6 +492,10 @@ public class ContestApiController extends Controller {
 
 			JsonNode jsonBody = request().body().asJson();
 
+			if (jsonBody.get("feedback") == null || jsonBody.path("votes") == null) {
+				return badRequest(jsonMsg("Bad request"));
+			}
+
 			String feedback = jsonBody.get("feedback").asText();
 
 			JsonNode votesJson = jsonBody.path("votes");
@@ -593,7 +602,7 @@ public class ContestApiController extends Controller {
 				return internalServerError(jsonMsg("Internal server error"));
 			}
 
-			Entry entry = null;
+			InsertedEntry entry = null;
 			try {
 				entry = contest.addEntry(programId);
 			} catch (SQLException e) {
@@ -601,7 +610,7 @@ public class ContestApiController extends Controller {
 				return internalServerError(jsonMsg("Internal server error"));
 			}
 
-			return entry == null ? internalServerError(jsonMsg("Internal server error")) : ok(entry.asJson());
+			return entry == null ? internalServerError(jsonMsg("Internal server error")) : (entry.getIsNew() ? ok(entry.asJson()) : badRequest(jsonMsg("That entry was already inserted")));
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 
@@ -652,6 +661,50 @@ public class ContestApiController extends Controller {
 			}
 
 			return ok("");
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+
+	public CompletionStage<Result> addAllSpinOffs(int id) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+
+			if (user == null) {
+				return unauthorized(jsonMsg("Unauthorized"));
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden(jsonMsg("forbidden"));
+			}
+
+			try {
+				Contest contest = user.getContestById(id);
+				if (contest == null) {
+					return notFound(jsonMsg("That contest doesn't exist"));
+				}
+
+				List<Long> programIds = new ArrayList<Long>();
+				Iterator<ArrayListExceptions<Long>> entryFetcher = new SpinOffIter(contest.getProgramId());
+				while (entryFetcher.hasNext()) {
+					ArrayListExceptions<Long> iteration = entryFetcher.next();
+					if (iteration.successful())
+						programIds.addAll(iteration);
+					else {
+						Logger.error("Error", iteration.getExceptions().get(0));
+						return internalServerError(jsonMsg("Internal server error"));
+					}
+				}
+
+				ObjectMapper jsonMapper = new ObjectMapper();
+				ArrayNode returnJson = jsonMapper.createArrayNode();
+				List<InsertedEntry> insertedEntries = contest.addEntries(programIds);
+				for (InsertedEntry entry : insertedEntries) {
+					if (entry.getIsNew())
+						returnJson.add(entry.asJson());
+				}
+
+				return ok(returnJson);
+			} catch (SQLException e) {
+				Logger.error("Error", e);
+				return internalServerError(jsonMsg("Internal server error"));
+			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 }

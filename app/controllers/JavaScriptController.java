@@ -9,19 +9,18 @@ public class JavaScriptController extends Controller {
 	public Result jsRoutes() {
 		return ok(JavaScriptReverseRouter.create("jsRoutes", routes.javascript.ContestUIController.contest(),
 				routes.javascript.ContestUIController.editContest(),
-				routes.javascript.ContestUIController.contestResults(),
-				routes.javascript.ContestUIController.entries(),
-				
-				routes.javascript.UserUIController.newUser(),
-				routes.javascript.UserUIController.users(),
-				
+				routes.javascript.ContestUIController.contestResults(), routes.javascript.ContestUIController.entries(),
+
+				routes.javascript.UserUIController.newUser(), routes.javascript.UserUIController.users(),
+
 				routes.javascript.UserApiController.getUsers(), routes.javascript.UserApiController.createUser(),
-				routes.javascript.UserApiController.removeUser(),
-				routes.javascript.UserApiController.promoteUser(),
-				
+				routes.javascript.UserApiController.removeUser(), routes.javascript.UserApiController.promoteUser(),
+
 				routes.javascript.ContestApiController.setBracket(),
 				routes.javascript.ContestApiController.getEntries(), routes.javascript.ContestApiController.getEntry(),
 				routes.javascript.ContestApiController.voteEntry(),
+				routes.javascript.ContestApiController.addAllSpinOffs(),
+				routes.javascript.ContestApiController.newEntry(),
 				routes.javascript.ContestApiController.createContest(),
 				routes.javascript.ContestApiController.getContests(),
 				routes.javascript.ContestApiController.deleteContest(),

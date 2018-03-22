@@ -342,8 +342,10 @@ const MDLDialog = class MDLDialog extends Component {
 		const dialogContent = document.createElement("div");
 		dialogContent.className = "mdl-dialog__content";
 		
-		if(text instanceof Element) {
+		if (text instanceof Element) {
 			dialogContent.appendChild(text);
+		} else if (text instanceof Component) {
+			text.appendTo(dialogContent);
 		} else {
 			const dialogText = document.createElement("p");
 			dialogText.textContent = text;
@@ -500,7 +502,7 @@ const IteratorTable = class IteratorTable extends Component {
 		})
 	}
 	insertItems(data) {
-		data.value.forEach(this.itemCallback.bind(this));
+		(Array.isArray(data) ? data : data.value).forEach(this.itemCallback.bind(this));
 		return data;
 	}
 	next() {

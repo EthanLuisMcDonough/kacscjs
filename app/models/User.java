@@ -431,6 +431,7 @@ public class User {
 		this.level = level;
 	}
 
+	@Override
 	public String toString() {
 		return "user[id = " + getId() + " | kaid = " + getKaid() + " | level = " + getLevel() + " | name = " + getName()
 				+ "]";

@@ -59,10 +59,11 @@ public class Entry {
 
 	public void realSetBracket(Bracket b) throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			try (PreparedStatement stmt = connection.prepareStatement("UPDATE entries SET bracket_id = ? WHERE id = ? LIMIT 1")) {
+			try (PreparedStatement stmt = connection
+					.prepareStatement("UPDATE entries SET bracket_id = ? WHERE id = ? LIMIT 1")) {
 				if (b == null)
 					stmt.setNull(1, Types.INTEGER);
-				else 
+				else
 					stmt.setInt(1, b.getId());
 				stmt.setInt(2, getId());
 				stmt.executeUpdate();
@@ -70,7 +71,7 @@ public class Entry {
 		}
 		setBracket(b);
 	}
-	
+
 	public JsonNode asJson() {
 		ObjectNode json = Json.newObject();
 		json.put("id", getId());

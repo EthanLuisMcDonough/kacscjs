@@ -79,7 +79,7 @@ public class Contest {
 
 			try (PreparedStatement insertContest = connection.prepareStatement(
 					"INSERT INTO contests (name, description, program_id, end_date, date_created) VALUES (?, ?, ?, ?, ?)",
-					Statement.RETURN_GENERATED_KEYS)) {
+					java.sql.Statement.RETURN_GENERATED_KEYS)) {
 				insertContest.setString(1, contest.getName());
 				insertContest.setString(2, contest.getDescription());
 				insertContest.setLong(3, contest.getProgramId());
@@ -105,7 +105,7 @@ public class Contest {
 			for (Criterion criterion : criteria) {
 				try (PreparedStatement insertCriterion = connection.prepareStatement(
 						"INSERT INTO criteria (contest_id, name, description, weight) VALUES (?, ?, ?, ?)",
-						Statement.RETURN_GENERATED_KEYS)) {
+						java.sql.Statement.RETURN_GENERATED_KEYS)) {
 					insertCriterion.setInt(1, contest.getId());
 					insertCriterion.setString(2, criterion.getName());
 					insertCriterion.setString(3, criterion.getDescription());
@@ -131,7 +131,8 @@ public class Contest {
 			}
 			for (Bracket bracket : brackets) {
 				try (PreparedStatement insertBracket = connection.prepareStatement(
-						"INSERT INTO brackets (name, contest_id) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+						"INSERT INTO brackets (name, contest_id) VALUES (?, ?)",
+						java.sql.Statement.RETURN_GENERATED_KEYS)) {
 					insertBracket.setString(1, bracket.getName());
 					insertBracket.setInt(2, contest.getId());
 					insertBracket.executeUpdate();
@@ -336,11 +337,12 @@ public class Contest {
 
 	public Bracket getBracket(int id) throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			try (PreparedStatement fetch = connection.prepareStatement("SELECT name FROM brackets WHERE id = ? AND contest_id = ? LIMIT 1")) {
+			try (PreparedStatement fetch = connection
+					.prepareStatement("SELECT name FROM brackets WHERE id = ? AND contest_id = ? LIMIT 1")) {
 				fetch.setInt(1, id);
 				fetch.setInt(2, getId());
 				try (ResultSet results = fetch.executeQuery()) {
-					if(results.next()) {
+					if (results.next()) {
 						Bracket b = new Bracket();
 						b.setId(id);
 						b.setName(results.getString("name"));
@@ -351,7 +353,7 @@ public class Contest {
 		}
 		return null;
 	}
-	
+
 	/**
 	 * Returns whether or not the contest can be judged by a user
 	 *
@@ -444,7 +446,7 @@ public class Contest {
 				Entry entry = new Entry();
 				entry.setId(entriesResults.getInt("id"));
 				entry.setProgramId(entriesResults.getLong("program_id"));
-				
+
 				Bracket bracket = null;
 				String bracketName = entriesResults.getString("bracket_name");
 				if (bracketName != null) {
@@ -453,9 +455,9 @@ public class Contest {
 					bracket.setName(entriesResults.getString("bracket_name"));
 				}
 				entry.setBracket(bracket);
-				
+
 				entry.setHasBeenJudged(entriesResults.getInt("has_judged") != 0);
-				
+
 				entries.add(entry);
 			}
 			return entries;
@@ -477,11 +479,10 @@ public class Contest {
 	public List<Entry> getAllContestEntries(int page, int limit) throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			try (PreparedStatement fetchEntriesStmt = connection.prepareStatement(
-					"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name \n" +  
-					"FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n" + 
-					"LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n" + 
-					"WHERE entries.contest_id = ? \n"+ 
-					"LIMIT ?, ?")) {
+					"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name \n"
+							+ "FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n"
+							+ "LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n"
+							+ "WHERE entries.contest_id = ? \n" + "LIMIT ?, ?")) {
 				fetchEntriesStmt.setInt(1, getFetcher().getId());
 				fetchEntriesStmt.setInt(2, getId());
 				fetchEntriesStmt.setInt(3, page * limit);
@@ -510,10 +511,10 @@ public class Contest {
 						int lowerBound = idBounds.getInt("min_id"), upperBound = idBounds.getInt("max_id");
 						int randIndex = generator.nextInt(upperBound - lowerBound + 1) + lowerBound;
 						try (PreparedStatement getEntryStmt = connection.prepareStatement(
-								"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name\n" +  
-								"FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n" + 
-								"LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n" + 
-								"WHERE entries.contest_id = ? AND feedback.id IS NULL AND entries.id >= ? LIMIT 1")) {
+								"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name\n"
+										+ "FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n"
+										+ "LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n"
+										+ "WHERE entries.contest_id = ? AND feedback.id IS NULL AND entries.id >= ? LIMIT 1")) {
 							getEntryStmt.setInt(1, getFetcher().getId());
 							getEntryStmt.setInt(2, getId());
 							getEntryStmt.setInt(3, randIndex);
@@ -588,37 +589,54 @@ public class Contest {
 	 * 
 	 * @throws SQLException
 	 */
-	public Entry addEntry(long programId) throws SQLException {
-		Entry entry = new Entry();
+	public InsertedEntry addEntry(long programId, Connection connection) throws SQLException {
+		InsertedEntry entry = new InsertedEntry();
 		entry.setProgramId(programId);
-		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			try (PreparedStatement checkStmt = connection
-					.prepareStatement("SELECT id FROM entries WHERE program_id = ?")) {
-				checkStmt.setLong(1, programId);
-				try (ResultSet checkRes = checkStmt.executeQuery()) {
-					if (checkRes.next()) {
-						entry.setId(checkRes.getInt("id"));
-						return entry;
-					} else {
-						try (PreparedStatement insertStmt = connection.prepareStatement(
-								"INSERT INTO entries (program_id, contest_id) VALUES (?, ?)",
-								Statement.RETURN_GENERATED_KEYS)) {
-							insertStmt.setLong(1, entry.getProgramId());
-							insertStmt.setInt(2, getId());
-							insertStmt.executeUpdate();
-							try (ResultSet insertRes = insertStmt.getGeneratedKeys()) {
-								if (insertRes.next()) {
-									entry.setId(insertRes.getInt(1));
-									return entry;
-								} else {
-									return null;
-								}
+		try (PreparedStatement checkStmt = connection.prepareStatement("SELECT id FROM entries WHERE program_id = ?")) {
+			checkStmt.setLong(1, programId);
+			try (ResultSet checkRes = checkStmt.executeQuery()) {
+				if (checkRes.next()) {
+					entry.setId(checkRes.getInt("id"));
+					entry.setIsNew(false);
+					return entry;
+				} else {
+					try (PreparedStatement insertStmt = connection.prepareStatement(
+							"INSERT INTO entries (program_id, contest_id) VALUES (?, ?)",
+							java.sql.Statement.RETURN_GENERATED_KEYS)) {
+						insertStmt.setLong(1, entry.getProgramId());
+						insertStmt.setInt(2, getId());
+						insertStmt.executeUpdate();
+						try (ResultSet insertRes = insertStmt.getGeneratedKeys()) {
+							if (insertRes.next()) {
+								entry.setId(insertRes.getInt(1));
+								entry.setIsNew(true);
+								return entry;
+							} else {
+								return null;
 							}
 						}
 					}
 				}
 			}
 		}
+	}
+
+	public InsertedEntry addEntry(long programId) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			return addEntry(programId, connection);
+		}
+	}
+
+	public List<InsertedEntry> addEntries(List<Long> programIds) throws SQLException {
+		List<InsertedEntry> entries = new ArrayList<InsertedEntry>();
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			connection.setAutoCommit(false);
+			for (long id : programIds) {
+				entries.add(addEntry(id, connection));
+			}
+			connection.commit();
+		}
+		return entries;
 	}
 
 	/**

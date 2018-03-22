@@ -130,7 +130,7 @@ public class UserApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> removeUser(int id) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -143,20 +143,20 @@ public class UserApiController extends Controller {
 
 			try {
 				User userToRemove = User.getUserById(id);
-				if(userToRemove == null)
+				if (userToRemove == null)
 					return notFound();
 				if (userToRemove.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 					user.setOtherUserLevel(userToRemove, UserLevel.REMOVED);
-				} else 
+				} else
 					return forbidden();
 			} catch (SQLException e) {
 				Logger.error("Error", e);
 			}
-			
-			return (Result)ok();
+
+			return ok("");
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> promoteUser(int id) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -169,17 +169,17 @@ public class UserApiController extends Controller {
 
 			try {
 				User userToRemove = User.getUserById(id);
-				if(userToRemove == null)
+				if (userToRemove == null)
 					return notFound();
 				if (userToRemove.getLevel().ordinal() < UserLevel.ADMIN.ordinal())
 					user.setOtherUserLevel(userToRemove, UserLevel.ADMIN);
-				else 
+				else
 					return badRequest();
 			} catch (SQLException e) {
 				Logger.error("Error", e);
 			}
-			
-			return (Result)ok();
+
+			return ok("");
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
-	} 
+	}
 }
