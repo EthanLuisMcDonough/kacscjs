@@ -24,6 +24,9 @@
 		}).catch(error);
 	}
 	
+	const rndEntry = new MDLAccentRippleBtn("Random entry");
+	rndEntry.addOnClick(randomEntry);
+	
 	const contestRoute = jsRoutes.controllers.ContestApiController.getContest(CONTEST_ID);
 	fetch(contestRoute.url, {
 		method: contestRoute.method,
@@ -39,6 +42,7 @@
 					contentEl.innerHTML = `
 						<h2>OOPS!</h2>
 						<p>You already judged this entry</p>`;
+					rndEntry.appendTo(contentEl);
 				} else {
 					fetch(`https://www.khanacademy.org/api/labs/scratchpads/${entryData.programId}?projection=${encodeURIComponent(JSON.stringify({height:1}))}`, {
 						method: "GET"
@@ -166,6 +170,7 @@
 									<li>The KA API is broken</li>
 									<li>A program with the ID ${(entryData.programId + "").replace(/[^\d]/g, "")} does not exist</li>
 								</ul>`;
+							rndEntry.appendTo(contentEl);
 						}
 					}).catch(error)
 				}

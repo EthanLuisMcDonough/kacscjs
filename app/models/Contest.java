@@ -499,14 +499,14 @@ public class Contest {
 	public Entry getRandomUnjudgedEntry() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			try (PreparedStatement rndStmt = connection
-					.prepareStatement("SELECT FLOOR(COUNT(*) * RAND()) AS rnd FROM entries \n"
+					.prepareStatement("SELECT COUNT(*) AS cnt, FLOOR(COUNT(*) * RAND()) AS rnd FROM entries \n"
 							+ "LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n"
 							+ "LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n"
 							+ "WHERE entries.contest_id = ? AND feedback.id IS NULL")) {
 				rndStmt.setInt(1, getFetcher().getId());
 				rndStmt.setInt(2, getId());
 				try (ResultSet rndRes = rndStmt.executeQuery()) {
-					if (rndRes.next()) {
+					if (rndRes.next() && rndRes.getInt("cnt") > 0) {
 						int randIndex = rndRes.getInt("rnd");
 						try (PreparedStatement getEntryStmt = connection.prepareStatement(
 								"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name\n"
