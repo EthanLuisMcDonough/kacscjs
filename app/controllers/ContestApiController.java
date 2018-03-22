@@ -610,7 +610,8 @@ public class ContestApiController extends Controller {
 				return internalServerError(jsonMsg("Internal server error"));
 			}
 
-			return entry == null ? internalServerError(jsonMsg("Internal server error")) : (entry.getIsNew() ? ok(entry.asJson()) : badRequest(jsonMsg("That entry was already inserted")));
+			return entry == null ? internalServerError(jsonMsg("Internal server error"))
+					: (entry.getIsNew() ? ok(entry.asJson()) : badRequest(jsonMsg("That entry was already inserted")));
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 

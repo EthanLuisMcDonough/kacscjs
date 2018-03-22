@@ -12,12 +12,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Random;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.mysql.cj.api.jdbc.Statement;
 
 import java.sql.Connection;
 
@@ -40,8 +38,6 @@ public class Contest {
 	private Date endDate = null, dateCreated = null;
 	private Integer userJudgedEntryCount = null;
 	private User fetcher = null;
-
-	private Random generator = new Random();
 
 	public Contest() {
 
@@ -502,19 +498,21 @@ public class Contest {
 	 */
 	public Entry getRandomUnjudgedEntry() throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			try (PreparedStatement idBoundsStmt = connection.prepareStatement(
-					"SELECT MIN(entries.id) AS min_id, MAX(entries.id) AS max_id FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? WHERE entries.contest_id = ? AND feedback.id IS NULL")) {
-				idBoundsStmt.setInt(1, getFetcher().getId());
-				idBoundsStmt.setInt(2, getId());
-				try (ResultSet idBounds = idBoundsStmt.executeQuery()) {
-					if (idBounds.next()) {
-						int lowerBound = idBounds.getInt("min_id"), upperBound = idBounds.getInt("max_id");
-						int randIndex = generator.nextInt(upperBound - lowerBound + 1) + lowerBound;
+			try (PreparedStatement rndStmt = connection
+					.prepareStatement("SELECT FLOOR(COUNT(*) * RAND()) AS rnd FROM entries \n"
+							+ "LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n"
+							+ "LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n"
+							+ "WHERE entries.contest_id = ? AND feedback.id IS NULL")) {
+				rndStmt.setInt(1, getFetcher().getId());
+				rndStmt.setInt(2, getId());
+				try (ResultSet rndRes = rndStmt.executeQuery()) {
+					if (rndRes.next()) {
+						int randIndex = rndRes.getInt("rnd");
 						try (PreparedStatement getEntryStmt = connection.prepareStatement(
 								"SELECT entries.id AS id, entries.program_id AS program_id, brackets.id AS bracket_id, feedback.id IS NOT NULL AS has_judged, brackets.name AS bracket_name\n"
-										+ "FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n"
+										+ "	FROM entries LEFT OUTER JOIN brackets ON brackets.id = entries.bracket_id \n"
 										+ "LEFT OUTER JOIN feedback ON feedback.entry_id = entries.id AND feedback.user_id = ? \n"
-										+ "WHERE entries.contest_id = ? AND feedback.id IS NULL AND entries.id >= ? LIMIT 1")) {
+										+ "WHERE entries.contest_id = ? AND feedback.id IS NULL LIMIT 1 OFFSET ?")) {
 							getEntryStmt.setInt(1, getFetcher().getId());
 							getEntryStmt.setInt(2, getId());
 							getEntryStmt.setInt(3, randIndex);
