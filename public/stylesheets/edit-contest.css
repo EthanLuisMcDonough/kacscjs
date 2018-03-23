@@ -1,0 +1,21 @@
+.mdl-list__item-primary-content {
+	display: flex;
+	align-items: center;
+	height:40px;
+	font-size: 125%;
+}
+
+.mdl-list__item-primary-content span {
+	width: 200px;
+	overflow-x: scroll;
+	padding: 0 6px;
+	border-bottom: 1px dotted #d3d3d3;
+}
+
+.mdl-list__item-primary-content .material-icons.mdl-list__item-icon {
+	cursor: pointer;
+}
+
+.add-bracket button {
+	margin-left: 10px;
+}

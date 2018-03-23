@@ -1,6 +1,5 @@
 (() => {
 	const form = document.getElementById("create-contest");
-	const criteria = [], brackets = [];
 	const criteriaEl = document.getElementById("criteria"),
 		bracketsEl = document.getElementById("brackets");
 	const addCriterionButton = document.getElementById("add-criterion"),
@@ -22,70 +21,6 @@
 			endDateField.parentElement.className = endDateField.parentElement.className.replace(/is-invalid/, "is-dirty");
 	    }
 	});
-	
-	class Criterion extends DomComponent {
-		constructor() {
-			super();
-		}
-		getValue() {
-			const [ name, weight ] = [...this.dom.querySelectorAll("input.mdl-textfield__input")].map(e => e.value);
-			const description = this.dom.getElementsByTagName("textarea")[0].value;
-			return { name, description, weight: parseInt(weight, 10) };
-		}
-		generateDom() {
-			const tableRow = document.createElement("tr");
-			
-			const name = new MDLTextfield("Criterion name", true);
-			const description = new MDLTextarea("Description", 3, true);
-			const weight = new MDLTextfield("Percent weight", true, "100|[1-9]\\d|[1-9]", "The weight must be a number between 1 and 100");
-			
-			const icon = new DomComponent(document.createElement("i"));
-			icon.dom.className = "material-icons";
-			icon.dom.innerHTML = "close";
-			icon.dom.addEventListener("click", () => { 
-				if(criteria.length > 1) {
-					this.remove();
-					criteria.splice(criteria.indexOf(this), 1);
-				}
-			});
-			
-			[name, description, weight, icon].forEach(e => {
-				const td = document.createElement("td");
-				e.appendTo(td);
-				tableRow.appendChild(td);
-			});
-			
-			return tableRow;
-		}
-	}
-	
-	class Bracket extends DomComponent {
-		constructor() {
-			super();
-		}
-		getValue() {
-			return this.dom.getElementsByClassName("mdl-textfield__input")[0].value;
-		}
-		generateDom() {
-			const item = document.createElement("div");
-			item.className = "mdl-list__item-primary-content";
-			
-			const textfield = new MDLTextfield("Bracket name", true);
-			
-			const icon = document.createElement("i");
-			icon.className = "material-icons mdl-list__item-icon";
-			icon.innerHTML = "close";
-			icon.addEventListener("click", () => { 
-				this.remove();
-				brackets.splice(brackets.indexOf(this), 1);
-			});
-			
-			textfield.appendTo(item);
-			item.appendChild(icon);
-			
-			return item;
-		}
-	}
 	
 	const UserItems = (() => {
 		const card = document.getElementById("judges-card");
@@ -149,13 +84,11 @@
 	function addCriterion() {
 		const criterion = new Criterion();
 		criterion.appendTo(criteriaEl);
-		criteria.push(criterion);
 	}
 	
 	function addBracket() {
 		const bracket = new Bracket();
 		bracket.appendTo(bracketsEl);
-		brackets.push(bracket);
 	}
 	
 	addCriterion();
@@ -190,7 +123,7 @@
 		endDate.setHours(parseInt(timeHour, 10));
 		endDate.setMinutes(parseInt(timeMinute, 10));
 		
-		if (criteria.map(e => e.getValue().weight).reduce((a, b) => a + b) != 100) {
+		if (Criterion.weightSum != 100) {
 			formError.textContent = "Your weights must add up to 100";
 			return;
 		}
@@ -200,8 +133,8 @@
 			description: descriptionField.value,
 			id: +programIdField.value,
 			endDate: endDate.getTime(),
-			criteria: criteria.map(e => e.getValue()),
-			brackets: brackets.map(e => e.getValue()),
+			criteria: Criterion.values,
+			brackets: Bracket.bracketNames,
 			judges: ids
 		};
 		

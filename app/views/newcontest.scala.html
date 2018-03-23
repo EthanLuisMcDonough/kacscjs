@@ -3,7 +3,7 @@
 
 @(user: User)
 
-@standardone("Contests", List(routes.Assets.versioned("libraries/pikaday.min.css").url, routes.Assets.versioned("stylesheets/new-contest.css").url), List(routes.Assets.versioned("libraries/pikaday.min.js").url, routes.Assets.versioned("javascripts/new-contest.js").url), user) {
+@standardone("Contests", List(routes.Assets.versioned("libraries/pikaday.min.css").url, routes.Assets.versioned("stylesheets/new-contest.css").url), List(routes.Assets.versioned("libraries/pikaday.min.js").url, routes.Assets.versioned("javascripts/contest-components.js").url, routes.Assets.versioned("javascripts/new-contest.js").url), user) {
 	<h1>New Contest</h1>
 	<form id="create-contest">
 		<div class="new-contest-fieldset mdl-card">

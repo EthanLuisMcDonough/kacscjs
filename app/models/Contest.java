@@ -16,6 +16,7 @@ import java.util.Set;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mysql.cj.api.jdbc.Statement;
 
 import java.sql.Connection;
 
@@ -828,6 +829,44 @@ public class Contest {
 					.prepareStatement("DELETE FROM contests WHERE id = ? LIMIT 1")) {
 				deleteContest.setInt(1, getId());
 				deleteContest.executeUpdate();
+			}
+			connection.commit();
+		}
+	}
+
+	public Bracket addBracket(String name) throws SQLException {
+		Bracket b = new Bracket();
+		b.setName(name);
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			try (PreparedStatement stmt = connection.prepareStatement(
+					"INSERT INTO brackets (name, contest_id) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+				stmt.setString(1, name);
+				stmt.setInt(2, getId());
+				stmt.executeUpdate();
+				try (ResultSet ids = stmt.getGeneratedKeys()) {
+					if (ids.next()) {
+						b.setId(ids.getInt(1));
+					}
+				}
+			}
+		}
+		return b;
+	}
+
+	public void deleteBracket(int id) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			connection.setAutoCommit(false);
+			try (PreparedStatement changeEntries = connection
+					.prepareStatement("UPDATE entries SET bracket_id = NULL WHERE bracket_id = ? AND contest_id = ?")) {
+				changeEntries.setInt(1, id);
+				changeEntries.setInt(2, getId());
+				changeEntries.executeUpdate();
+			}
+			try (PreparedStatement deleteBracket = connection
+					.prepareStatement("DELETE FROM brackets WHERE contest_id = ? AND id = ?")) {
+				deleteBracket.setInt(1, getId());
+				deleteBracket.setInt(2, id);
+				deleteBracket.executeUpdate();
 			}
 			connection.commit();
 		}

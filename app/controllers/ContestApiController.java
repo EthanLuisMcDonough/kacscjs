@@ -9,6 +9,8 @@ import play.mvc.Result;
 import play.Logger;
 
 import static configs.PrivateConfig.CONNECTION_STRING;
+import static configs.PrivateConfig.USERNAME;
+import static configs.PrivateConfig.PASSWORD;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -159,7 +161,7 @@ public class ContestApiController extends Controller {
 			return badRequest(jsonMsg("Your contest must have at least one judge"));
 		}
 
-		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING)) {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			try (PreparedStatement checkStmt = connection
 					.prepareStatement("SELECT COUNT(*) AS num FROM contests WHERE program_id = ?")) {
 				checkStmt.setLong(1, programId);
@@ -347,7 +349,62 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-
+	
+	public CompletionStage<Result> addBracket(int contestId) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+			if (user == null) {
+				return unauthorized(jsonMsg("Unauthorized"));
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden(jsonMsg("Forbidden"));
+			}
+			
+			JsonNode body = request().body().asJson();
+			if(body == null || body.get("name") == null || !body.get("name").isTextual()) {
+				return badRequest(jsonMsg("Invalid name"));
+			}
+			
+			String name = body.get("name").asText();
+			
+			try {
+				Contest contest = user.getContestById(contestId);
+				if (contest == null) {
+					return notFound(jsonMsg("That contest doesn't exist"));
+				}
+				
+				return ok(contest.addBracket(name).asJson());
+			} catch (SQLException e) {
+				Logger.error("Error", e);
+				return internalServerError(jsonMsg("Internal server error"));
+			}
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+	
+	public CompletionStage<Result> removeBracket(int contestId, int bracketId) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+			if (user == null) {
+				return unauthorized();
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden();
+			}
+			
+			try {
+				Contest contest = user.getContestById(contestId);
+				if (contest == null) {
+					return notFound();
+				}
+				
+				contest.deleteBracket(bracketId);
+				
+				return ok("");
+			} catch (SQLException e) {
+				Logger.error("Error", e);
+				return internalServerError();
+			}
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+	
 	public CompletionStage<Result> getContests(int page, int limit) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());

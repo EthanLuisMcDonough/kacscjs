@@ -19,7 +19,7 @@
 				const promote = document.createElement("i");
 				const remove = document.createElement("i");
 				
-				const row = new TableRow(linkc, promote, remove);
+				const row = new TableRow(linkc, item.id, promote, remove);
 				
 				if (item.level < UserLevel.ADMIN.ordinal()) {
 					promote.style.cursor = remove.style.cursor = "pointer";
@@ -115,6 +115,7 @@
 		
 		return new IteratorTable(new MDLTable([
 			"User", 
+			"User ID", 
 			"Promote to admin", 
 			"Remove"
 		]), iterator, forEachItem, [ newUser ]);

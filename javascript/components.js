@@ -81,8 +81,17 @@ const MDLTextfield = class MDLTextfield extends Component {
 	constructor(label, required = false, pattern = null, errorText = null) {
 		super(label, required, pattern, errorText);
 	}
-	getTextContent() {
+	get inputEl() {
+		return this.dom.getElementsByClassName("mdl-textfield__input")[0]
+	}
+	get value() {
 		return this.dom.getElementsByClassName("mdl-textfield__input")[0].value;
+	}
+	set value(v) {
+		this.dom.getElementsByClassName("mdl-textfield__input")[0].value = v;
+	}
+	getTextContent() {
+		return this.value;
 	}
 	generateDom(lbl, required, pattern, errorText) {
 		const textfield = document.createElement("span");
@@ -120,8 +129,14 @@ const MDLTextarea = class MDLTextarea extends Component {
 	constructor(label, rows = 3, required = false) {
 		super(label, rows, required);
 	}
-	getValue() {
+	get value() {
 		return this.dom.getElementsByClassName("mdl-textfield__input")[0].value;
+	}
+	set value(v) {
+		this.dom.getElementsByClassName("mdl-textfield__input")[0].value = v;
+	}
+	getValue() {
+		return this.value;
 	}
 	generateDom(lbl, rows, required) {
 		const textfield = document.createElement("span");

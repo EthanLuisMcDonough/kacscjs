@@ -34,7 +34,7 @@
 			["Name", "Description", "Weight"], 
 			data.criteria
 				.sort((a, b) => b.weight - a.weight)
-				.map(criterion => new TableRow(criterion.name, criterion.description, criterion.weight))
+				.map(criterion => new TableRow(criterion.name, criterion.description, criterion.weight + "%"))
 		);
 		criteriaTable.appendTo(contestDiv);
 		
@@ -68,7 +68,7 @@
 		if(User.LEVEL.ordinal() >= UserLevel.ADMIN.ordinal()) {
 			const editBtn = new MDLAccentRippleBtn("Edit");
 			editBtn.addOnClick(e => {
-				alert("EDIT");
+				window.location.replace(jsRoutes.controllers.ContestUIController.editContest(CONTEST_ID).url);
 			});
 			editBtn.appendTo(buttonDiv);
 			
