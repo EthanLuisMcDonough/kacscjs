@@ -1,0 +1,9 @@
+@import models.User
+@import scala.collection.immutable.List
+
+@(code: Int, msg: String, user: User = null)
+
+@standardpage(s"Error $code", List(), List(), user) {
+  <h1>OOPS!</h1>
+  <p>@msg</p>
+}

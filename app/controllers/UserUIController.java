@@ -10,13 +10,13 @@ public class UserUIController extends Controller {
 		User user = User.getFromSession(session());
 		return user != null && user.getLevel().ordinal() >= UserLevel.ADMIN.ordinal()
 				? ok(views.html.users.render(user))
-				: forbidden(views.html.error403.render());
+				: forbidden(views.html.error403.render(user));
 	}
 
 	public Result newUser() {
 		User user = User.getFromSession(session());
 		return user != null && user.getLevel().ordinal() >= UserLevel.ADMIN.ordinal()
 				? ok(views.html.newuser.render(user))
-				: forbidden(views.html.error403.render());
+				: forbidden(views.html.error403.render(user));
 	}
 }

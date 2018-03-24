@@ -1,6 +1,5 @@
-@()
+@import models.User
 
-@main("Unauthorized") {
-  <h1>401</h1>
-  <p>Unauthorized</p>
-}
+@(user: User)
+
+@errorpage(401, "Unauthorized", user)

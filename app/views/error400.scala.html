@@ -1,6 +1,5 @@
-@()
+@import models.User
 
-@main("Bad request") {
-  <h1>400</h1>
-  <p>Bad request</p>
-}
+@(user: User)
+
+@errorpage(400, "Bad request", user)

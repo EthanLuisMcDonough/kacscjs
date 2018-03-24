@@ -141,7 +141,6 @@
 			errorText.className = "error-text";
 			criteria.appendChild(errorText);
 			
-			
 			return criteria;
 		})());
 		

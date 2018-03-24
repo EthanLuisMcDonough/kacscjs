@@ -102,7 +102,7 @@ public class LoginController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(e -> {
 			Logger.error(e.getMessage(), e);
-			return internalServerError(views.html.error500.render());
+			return internalServerError(views.html.error500.render(User.getFromSession(session())));
 		});
 	}
 
@@ -115,9 +115,9 @@ public class LoginController extends Controller {
 			if (query.get("oauth_token_secret") == null || query.get("oauth_token_secret").length == 0
 					|| query.get("oauth_token") == null || query.get("oauth_token").length == 0
 					|| query.get("oauth_verifier") == null || query.get("oauth_verifier").length == 0) {
-				return badRequest(views.html.error400.render());
+				return badRequest(views.html.error400.render(User.getFromSession(session())));
 			} else if (token == null || realToken == null || !token.equals(realToken)) {
-				return unauthorized(views.html.error401.render());
+				return unauthorized(views.html.error401.render(User.getFromSession(session())));
 			}
 
 			String tokenPublic = query.get("oauth_token")[0], tokenSecret = query.get("oauth_token_secret")[0],
@@ -128,7 +128,7 @@ public class LoginController extends Controller {
 				user = getUserFromOAuthRequestToken(tokenPublic, tokenSecret, verifier);
 			} catch (Exception e) {
 				Logger.error(e.getMessage(), e);
-				return internalServerError(views.html.error500.render());
+				return internalServerError(views.html.error500.render(user));
 			}
 
 			if (user != null) {
@@ -138,7 +138,7 @@ public class LoginController extends Controller {
 			return temporaryRedirect(routes.ContestUIController.contests().url());
 		}, httpExecutionContext.current()).exceptionally(e -> {
 			Logger.error(e.getMessage(), e);
-			return internalServerError(views.html.error500.render());
+			return internalServerError(views.html.error500.render(User.getFromSession(session())));
 		});
 	}
 

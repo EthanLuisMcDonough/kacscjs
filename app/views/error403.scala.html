@@ -1,8 +1,5 @@
-@import scala.collection.immutable.List
+@import models.User
 
-@()
+@(user: User)
 
-@main("Forbidden", List(), List(), null) {
-  <h1>403</h1>
-  <p>You're not allowed to see this page</p>
-}
+@errorpage(403, "You're not allowed to see this page", user)
