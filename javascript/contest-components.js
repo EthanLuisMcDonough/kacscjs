@@ -14,13 +14,9 @@ const Criterion = (() => {
 		generateDom(nameText, descriptionText, weightText) {
 			const tableRow = document.createElement("tr");
 			
-			const name = new MDLTextfield("Criterion name", true);
-			const description = new MDLTextarea("Description", 3, true);
-			const weight = new MDLTextfield("Percent weight", true, "100|[1-9]\\d|[1-9]", "The weight must be a number between 1 and 100");
-			
-			name.value = nameText;
-			description.value = descriptionText;
-			weight.value = weightText;
+			const name = new MDLTextfield("Criterion name", true, null, null, nameText);
+			const description = new MDLTextarea("Description", 3, true, descriptionText);
+			const weight = new MDLTextfield("Percent weight", true, "100|[1-9]\\d|[1-9]", "The weight must be a number between 1 and 100", weightText);
 			
 			const icon = new DomComponent(document.createElement("i"));
 			icon.dom.className = "material-icons";

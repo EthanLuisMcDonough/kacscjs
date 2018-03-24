@@ -2,8 +2,10 @@ package models;
 
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,9 +18,6 @@ import java.util.Set;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.mysql.cj.api.jdbc.Statement;
-
-import java.sql.Connection;
 
 import play.libs.Json;
 
@@ -76,7 +75,7 @@ public class Contest {
 
 			try (PreparedStatement insertContest = connection.prepareStatement(
 					"INSERT INTO contests (name, description, program_id, end_date, date_created) VALUES (?, ?, ?, ?, ?)",
-					java.sql.Statement.RETURN_GENERATED_KEYS)) {
+					Statement.RETURN_GENERATED_KEYS)) {
 				insertContest.setString(1, contest.getName());
 				insertContest.setString(2, contest.getDescription());
 				insertContest.setLong(3, contest.getProgramId());
@@ -102,7 +101,7 @@ public class Contest {
 			for (Criterion criterion : criteria) {
 				try (PreparedStatement insertCriterion = connection.prepareStatement(
 						"INSERT INTO criteria (contest_id, name, description, weight) VALUES (?, ?, ?, ?)",
-						java.sql.Statement.RETURN_GENERATED_KEYS)) {
+						Statement.RETURN_GENERATED_KEYS)) {
 					insertCriterion.setInt(1, contest.getId());
 					insertCriterion.setString(2, criterion.getName());
 					insertCriterion.setString(3, criterion.getDescription());
@@ -129,7 +128,7 @@ public class Contest {
 			for (Bracket bracket : brackets) {
 				try (PreparedStatement insertBracket = connection.prepareStatement(
 						"INSERT INTO brackets (name, contest_id) VALUES (?, ?)",
-						java.sql.Statement.RETURN_GENERATED_KEYS)) {
+						Statement.RETURN_GENERATED_KEYS)) {
 					insertBracket.setString(1, bracket.getName());
 					insertBracket.setInt(2, contest.getId());
 					insertBracket.executeUpdate();
@@ -601,7 +600,7 @@ public class Contest {
 				} else {
 					try (PreparedStatement insertStmt = connection.prepareStatement(
 							"INSERT INTO entries (program_id, contest_id) VALUES (?, ?)",
-							java.sql.Statement.RETURN_GENERATED_KEYS)) {
+							Statement.RETURN_GENERATED_KEYS)) {
 						insertStmt.setLong(1, entry.getProgramId());
 						insertStmt.setInt(2, getId());
 						insertStmt.executeUpdate();
@@ -870,6 +869,48 @@ public class Contest {
 			}
 			connection.commit();
 		}
+	}
+	
+	public HashMap<Integer, Criterion> replaceCriteria(List<Criterion> criteria) throws SQLException {
+		HashMap<Integer, Criterion> crit = new HashMap<Integer, Criterion>();
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			connection.setAutoCommit(false);
+			try (PreparedStatement deleteCritEntries = connection.prepareStatement("DELETE crit_entry FROM crit_entry JOIN criteria ON crit_entry.criterion_id = criteria.id WHERE criteria.contest_id = ?")) {
+				deleteCritEntries.setInt(1, getId());
+				deleteCritEntries.executeUpdate();
+			}
+			try (PreparedStatement deleteFeedback = connection.prepareStatement("DELETE feedback FROM feedback JOIN entries ON feedback.entry_id = entries.id WHERE entries.contest_id = ?")) {
+				deleteFeedback.setInt(1, getId());
+				deleteFeedback.executeUpdate();
+			}
+			try (PreparedStatement deleteCriteria = connection.prepareStatement("DELETE FROM criteria WHERE contest_id = ?")) {
+				deleteCriteria.setInt(1, getId());
+				deleteCriteria.executeUpdate();
+			}
+			for (Criterion criterion : criteria) {
+				try (PreparedStatement insertCriterion = connection.prepareStatement(
+						"INSERT INTO criteria (contest_id, name, description, weight) VALUES (?, ?, ?, ?)",
+						Statement.RETURN_GENERATED_KEYS)) {
+					insertCriterion.setInt(1, getId());
+					insertCriterion.setString(2, criterion.getName());
+					insertCriterion.setString(3, criterion.getDescription());
+					insertCriterion.setInt(4, criterion.getWeight());
+					insertCriterion.executeUpdate();
+
+					try (ResultSet keys = insertCriterion.getGeneratedKeys()) {
+						if (keys != null && keys.next()) {
+							int id = keys.getInt(1);
+							criterion.setId(id);
+							crit.put(id, criterion);
+						}
+					}
+				}
+			}
+			connection.commit();
+		}
+		
+		setCriteria(crit);
+		return crit;
 	}
 
 	/* GETTERS AND SETTERS */

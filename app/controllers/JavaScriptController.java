@@ -29,7 +29,8 @@ public class JavaScriptController extends Controller {
 				routes.javascript.ContestApiController.entryScores(),
 				routes.javascript.ContestApiController.deleteEntry(),
 				routes.javascript.ContestApiController.addBracket(),
-				routes.javascript.ContestApiController.removeBracket()));
+				routes.javascript.ContestApiController.removeBracket(),
+				routes.javascript.ContestApiController.replaceCriteria()));
 	}
 
 	public Result userJs() {

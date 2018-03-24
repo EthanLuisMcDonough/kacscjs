@@ -78,8 +78,8 @@ const MDLSlider = class MDLSlider extends Component {
 }
 
 const MDLTextfield = class MDLTextfield extends Component {
-	constructor(label, required = false, pattern = null, errorText = null) {
-		super(label, required, pattern, errorText);
+	constructor(label, required = false, pattern = null, errorText = null, content = "") {
+		super(label, required, pattern, errorText, content);
 	}
 	get inputEl() {
 		return this.dom.getElementsByClassName("mdl-textfield__input")[0]
@@ -93,11 +93,13 @@ const MDLTextfield = class MDLTextfield extends Component {
 	getTextContent() {
 		return this.value;
 	}
-	generateDom(lbl, required, pattern, errorText) {
+	generateDom(lbl, required, pattern, errorText, content) {
 		const textfield = document.createElement("span");
 		textfield.className = "mdl-textfield mdl-js-textfield";
 		
-		const textInput = new DomComponent(document.createElement("input"));
+		const rawInput = document.createElement("input");
+		rawInput.value = content;
+		const textInput = new DomComponent(rawInput);
 		textInput.dom.setAttribute("type", "text");
 		textInput.dom.className = "mdl-textfield__input";
 		
@@ -126,8 +128,8 @@ const MDLTextfield = class MDLTextfield extends Component {
 }
 
 const MDLTextarea = class MDLTextarea extends Component {
-	constructor(label, rows = 3, required = false) {
-		super(label, rows, required);
+	constructor(label, rows = 3, required = false, content = "") {
+		super(label, rows, required, content);
 	}
 	get value() {
 		return this.dom.getElementsByClassName("mdl-textfield__input")[0].value;
@@ -138,11 +140,13 @@ const MDLTextarea = class MDLTextarea extends Component {
 	getValue() {
 		return this.value;
 	}
-	generateDom(lbl, rows, required) {
+	generateDom(lbl, rows, required, content) {
 		const textfield = document.createElement("span");
 		textfield.className = "mdl-textfield mdl-js-textfield";
 		
-		const textInput = new DomComponent(document.createElement("textarea"));
+		const rawInput = document.createElement("textarea");
+		rawInput.value = content;
+		const textInput = new DomComponent(rawInput);
 		textInput.dom.setAttribute("type", "text");
 		textInput.dom.className = "mdl-textfield__input";
 		textInput.dom.setAttribute("rows", rows);
@@ -223,6 +227,9 @@ const MDLTable = class MDLTable extends Component {
 		super(columns, rows);
 		this.columns = columns;
 		this.rows = rows;
+	}
+	get tbody() {
+		return this.dom.getElementsByTagName("tbody")[0];
 	}
 	addRow(row) {
 		this.rows.push(row);

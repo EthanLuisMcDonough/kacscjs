@@ -81,5 +81,11 @@
 		
 		contestDiv.appendChild(buttonDiv);
 		
-	}).catch(console.error);
+	}).catch(e => {
+		contestDiv.innerHTML = `
+			<h2>OOPS!</h2>
+			<p>${e.status == 404 ? "That contest doesn't exist" : (e.status == 403 ? "You're not allowed to see this page" : "Error")}</p>
+		`;
+		console.error(e);
+	});
 })();

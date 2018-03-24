@@ -96,31 +96,14 @@ public class ContestApiController extends Controller {
 			return badRequest(jsonMsg("Bad request"));
 		}
 
-		List<Criterion> criteria = new ArrayList<Criterion>();
 		List<Bracket> brackets = new ArrayList<Bracket>();
 		Set<Integer> judgeIds = new HashSet<Integer>();
-
-		Iterator<JsonNode> criteriaIterator = criteriaJson.iterator();
-		int criteriaCounter = 0;
-		while (criteriaIterator.hasNext()) {
-			JsonNode tok = criteriaIterator.next();
-			if (tok.hasNonNull("name") && tok.get("name").asText().trim().length() > 0 && tok.hasNonNull("description")
-					&& tok.get("description").asText().trim().length() > 0 && tok.hasNonNull("weight")) {
-				Criterion c = new Criterion();
-				c.setName(tok.get("name").asText().trim());
-				c.setDescription(tok.get("description").asText().trim());
-				c.setWeight(tok.get("weight").asInt());
-				criteria.add(c);
-			} else {
-				return badRequest(jsonMsg(String.format("Invalid criterion provided (position %d)", criteriaCounter)));
-			}
-			criteriaCounter++;
-		}
-
-		if (criteria.size() == 0
-				|| criteria.stream().mapToInt(c -> c.getWeight()).reduce((a, b) -> a + b).getAsInt() != 100
-				|| criteria.stream().filter(e -> e.getWeight() <= 0).count() > 0) {
-			return badRequest(jsonMsg("Please make sure that all of your weights add up to 100"));
+		List<Criterion> criteria = null;
+		try {
+			criteria = extractCriteria(criteriaJson);
+		} catch (InvalidCriterionException | CriteriaSumOutOfBoundsException e2) {
+			Logger.error("User error", e2);
+			return badRequest(jsonMsg(e2.getMessage()));
 		}
 
 		Iterator<JsonNode> bracketIterator = bracketsJson.iterator();
@@ -599,6 +582,8 @@ public class ContestApiController extends Controller {
 						"You don't judge this contest." + (user.getLevel().ordinal() >= UserLevel.ADMIN.ordinal()
 								? "  You need to add yourself as a judge before you can vote"
 								: "")));
+			} else if (!contest.isJudgeable()) {
+				return badRequest(jsonMsg("You can't judge this contest at the moment"));
 			}
 
 			Entry entry = null;
@@ -764,5 +749,82 @@ public class ContestApiController extends Controller {
 				return internalServerError(jsonMsg("Internal server error"));
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+	
+	public CompletionStage<Result> replaceCriteria(int id) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+			if(user == null) {
+				return unauthorized(jsonMsg("Unauthorized"));
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden(jsonMsg("Forbidden"));
+			}
+			
+			JsonNode body = request().body().asJson();
+			if(body == null || !body.isArray()) {
+				return badRequest(jsonMsg("Bad request"));
+			}
+			
+			try {
+				Contest contest = user.getContestById(id);
+				if (contest == null) {
+					return notFound(jsonMsg("That contest doesn't exist"));
+				}
+				
+				List<Criterion> criteria = extractCriteria(body);
+				
+				contest.replaceCriteria(criteria);
+				
+				return ok(jsonMsg("Success"));
+			} catch (SQLException e) {
+				Logger.error("error", e);
+				return internalServerError(jsonMsg("Internal server error"));
+			} catch (InvalidCriterionException | CriteriaSumOutOfBoundsException e) {
+				Logger.error("User error", e);
+				return badRequest(jsonMsg(e.getMessage()));
+			}
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+	
+	private class InvalidCriterionException extends NullPointerException {
+		private static final long serialVersionUID = 1L;
+		public InvalidCriterionException(String msg) {
+			super(msg);
+		}
+	}
+	
+	private class CriteriaSumOutOfBoundsException extends Exception {
+		private static final long serialVersionUID = 1L;
+		public CriteriaSumOutOfBoundsException(String msg) {
+			super(msg);
+		}
+	}
+	
+	private List<Criterion> extractCriteria(JsonNode critJson) throws InvalidCriterionException, CriteriaSumOutOfBoundsException {
+		List<Criterion> criteria = new ArrayList<Criterion>();
+		Iterator<JsonNode> criteriaIterator = critJson.iterator();
+		int criteriaCounter = 0;
+		while (criteriaIterator.hasNext()) {
+			JsonNode tok = criteriaIterator.next();
+			if (tok.hasNonNull("name") && tok.get("name").asText().trim().length() > 0 && tok.hasNonNull("description")
+					&& tok.get("description").asText().trim().length() > 0 && tok.hasNonNull("weight")) {
+				Criterion c = new Criterion();
+				c.setName(tok.get("name").asText().trim());
+				c.setDescription(tok.get("description").asText().trim());
+				c.setWeight(tok.get("weight").asInt());
+				criteria.add(c);
+			} else {
+				throw new InvalidCriterionException(String.format("Invalid criterion provided (position %d)", criteriaCounter));
+			}
+			criteriaCounter++;
+		}
+		
+		if (criteria.size() == 0
+				|| criteria.stream().mapToInt(c -> c.getWeight()).reduce((a, b) -> a + b).getAsInt() != 100
+				|| criteria.stream().filter(e -> e.getWeight() <= 0).count() > 0) {
+			throw new CriteriaSumOutOfBoundsException("Please make sure that all of your weights add up to 100");
+		}
+		
+		return criteria;
 	}
 }
