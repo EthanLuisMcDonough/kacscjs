@@ -1,8 +1,8 @@
 package controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import com.github.scribejava.core.model.OAuth1AccessToken;
@@ -77,16 +77,26 @@ public class LoginController extends Controller {
 		OAuth1RequestToken requestToken = new OAuth1RequestToken(tokenPublic, tokenSecret);
 		OAuth1AccessToken accessToken = kaservice.getAccessToken(requestToken, verifier);
 
-		OAuthRequest req = new OAuthRequest(Verb.GET, "https://www.khanacademy.org/api/v1/user");
+		OAuthRequest req = new OAuthRequest(Verb.GET, "https://www.khanacademy.org/api/v1/user?casing=camel");
 		kaservice.signRequest(accessToken, req);
 
 		com.github.scribejava.core.model.Response res = kaservice.execute(req);
-		InputStream responseStream = res.getStream();
-		ObjectMapper obj = new ObjectMapper();
-		HashMap<String, Object> userData = obj.readValue(responseStream, HashMap.class);
-		responseStream.close();
-
-		return User.getUserByKaid(userData.get("kaid") + "");
+		try (InputStream responseStream = res.getStream()) {
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode json = mapper.readTree(responseStream);
+			
+			if (json.get("kaid") == null || !json.get("kaid").isTextual()) {
+				return null;
+			}
+			
+			User user = User.getUserByKaid(json.get("kaid").asText());
+			
+			if(json.get("nickname") != null && json.get("nickname").isTextual()) {
+				user.realSetName(json.get("nickname").asText());
+			}
+			
+			return user;
+		}
 	}
 
 	public CompletionStage<Result> getAuthURL() {

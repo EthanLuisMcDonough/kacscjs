@@ -7,6 +7,8 @@ SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 
+SET @kacscjs_init_admin_kaid = "kaid_1063314115048600759228780"; /* <- YOUR KAID HERE */
+
 -- -----------------------------------------------------
 -- Schema mydb
 -- -----------------------------------------------------
@@ -141,6 +143,7 @@ ENGINE = InnoDB
 AUTO_INCREMENT = 22
 DEFAULT CHARACTER SET = utf8;
 
+INSERT INTO users (kaid, level, name) VALUES (@kacscjs_init_admin_kaid, 2, "");
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

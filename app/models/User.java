@@ -59,21 +59,16 @@ public class User {
 	}
 
 	public void realSetName(String name) throws SQLException {
-		name = name.trim().substring(0, 255);
+		name = name.trim();
+		name = name.length() > 255 ? name.substring(0, 255) : name; 
 
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
-			connection.setAutoCommit(false);
 			try (PreparedStatement stmt = connection
 					.prepareStatement("UPDATE users SET name = ? WHERE id = ? LIMIT 1")) {
 				stmt.setString(1, name);
-				stmt.setInt(2, id);
+				stmt.setInt(2, getId());
 				stmt.executeUpdate();
-			} catch (SQLException e) {
-				connection.rollback();
-				throw e;
 			}
-		} catch (SQLException e) {
-			throw e;
 		}
 
 		setName(name);
