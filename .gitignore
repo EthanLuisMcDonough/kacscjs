@@ -7,7 +7,6 @@ app/configs/PrivateConfig.java
 *.class
 build
 bin
-gradlew
 project/project
 project/target
 .settings
