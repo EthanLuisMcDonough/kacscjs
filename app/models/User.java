@@ -46,11 +46,11 @@ public class User {
 	public boolean equals(Object user) {
 		return user instanceof User && getId() == ((User) user).getId();
 	}
-	
+
 	@Override
 	public int hashCode() {
-        return Objects.hash(id);
-    }
+		return Objects.hash(id);
+	}
 
 	public Contest getContestById(Connection connection, int id) throws SQLException {
 		return Contest.getContestById(connection, id, this);

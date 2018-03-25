@@ -262,12 +262,12 @@ public class Contest {
 							contest.setBrackets(brackets);
 						}
 					}
-					try (PreparedStatement fetchJudges = connection
-							.prepareStatement("SELECT users.id AS id, users.kaid AS kaid, users.level AS level, users.name AS name FROM judges JOIN users ON judges.user_id = users.id WHERE contest_id = ?")) {
+					try (PreparedStatement fetchJudges = connection.prepareStatement(
+							"SELECT users.id AS id, users.kaid AS kaid, users.level AS level, users.name AS name FROM judges JOIN users ON judges.user_id = users.id WHERE contest_id = ?")) {
 						fetchJudges.setInt(1, contest.getId());
 						try (ResultSet judgesRes = fetchJudges.executeQuery()) {
 							Set<User> judges = new HashSet<User>();
-							while (judgesRes.next()) { 
+							while (judgesRes.next()) {
 								User judge = new User();
 								judge.setId(judgesRes.getInt("id"));
 								judge.setKaid(judgesRes.getString("kaid"));
@@ -348,9 +348,9 @@ public class Contest {
 	 * @return boolean
 	 */
 	public boolean resultsDisclosed() {
-		return getFetcher().getLevel().ordinal() >= UserLevel.ADMIN.ordinal() || (getEntryCount() > 0
-				&& getJudgedEntryCount() == getEntryCount() && getEndDate().getTime() < System.currentTimeMillis()
-				&& getJudges().contains(getFetcher()));
+		return getFetcher().getLevel().ordinal() >= UserLevel.ADMIN.ordinal()
+				|| (getEntryCount() > 0 && getJudgedEntryCount() == getEntryCount()
+						&& getEndDate().getTime() < System.currentTimeMillis() && getJudges().contains(getFetcher()));
 	}
 
 	/**
@@ -946,6 +946,30 @@ public class Contest {
 		}
 	}
 
+	public void realSetNameDesc(String name, String description) throws SQLException {
+		name = nameTrim(name);
+		description = descriptionTrim(description);
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			try (PreparedStatement updateContest = connection
+					.prepareStatement("UPDATE contests SET name = ?, description = ? WHERE id = ?")) {
+				updateContest.setString(1, name);
+				updateContest.setString(2, description);
+				updateContest.setInt(3, getId());
+				updateContest.executeUpdate();
+			}
+		}
+	}
+
+	private String nameTrim(String name) {
+		name = name.trim();
+		return name.length() <= 255 ? name : name.substring(0, 255);
+	}
+
+	private String descriptionTrim(String description) {
+		description = description.trim();
+		return description.length() <= 500 ? description : description.substring(0, 500);
+	}
+
 	/* GETTERS AND SETTERS */
 	public List<Bracket> getBrackets() {
 		return brackets;
@@ -976,7 +1000,7 @@ public class Contest {
 	}
 
 	public void setName(String name) {
-		this.name = name.length() <= 255 ? name : name.trim().substring(0, 255);
+		this.name = nameTrim(name);
 	}
 
 	public String getDescription() {
@@ -984,7 +1008,7 @@ public class Contest {
 	}
 
 	public void setDescription(String description) {
-		this.description = description.length() <= 500 ? description : description.trim().substring(0, 500);
+		this.description = descriptionTrim(description);
 	}
 
 	public long getProgramId() {

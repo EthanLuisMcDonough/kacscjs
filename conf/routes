@@ -28,6 +28,7 @@ GET     /api/contests/:contestId/entries/:entryId          controllers.ContestAp
 GET     /api/contests/:id/results/:page/:limit             controllers.ContestApiController.entryScores(id: Int, page: Int, limit: Int)
 POST    /api/contests                                      controllers.ContestApiController.createContest
 PATCH   /api/contests/:id/criteria                         controllers.ContestApiController.replaceCriteria(id: Int)
+PATCH   /api/contests/:id/basicinfo                        controllers.ContestApiController.basicInfo(id: Int)
 POST    /api/contests/:id/brackets                         controllers.ContestApiController.addBracket(id: Int)
 DELETE  /api/contests/:contestId/brackets/:bracketId       controllers.ContestApiController.removeBracket(contestId: Int, bracketId: Int)
 PUT     /api/contests/:contestId/judges/:userId            controllers.ContestApiController.addJudge(contestId: Int, userId: Int)

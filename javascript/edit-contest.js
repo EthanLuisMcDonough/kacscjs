@@ -94,6 +94,46 @@
 		})());
 		
 		content.appendChild((() => {
+			const basicInfo = document.createElement("form");
+			basicInfo.innerHTML = "<h3>Basic info</h3>";
+			basicInfo.className = "new-contest-fieldset mdl-card";
+			
+			const title = new MDLTextfield("Contest title", true, null, null, data.name);
+			title.appendTo(basicInfo);
+			const description = new MDLTextarea("Description", 3, true, data.description);
+			description.appendTo(basicInfo);
+			
+			const buttonDiv = document.createElement("div");
+			buttonDiv.className = "button-div";
+			
+			const update = new MDLAccentRippleBtn("Update basic info");
+			update.dom.setAttribute("type", "submit");
+			update.appendTo(buttonDiv);
+			
+			basicInfo.addEventListener("submit", e => {
+				const route = jsRoutes.controllers.ContestApiController.basicInfo(CONTEST_ID);
+				e.preventDefault();
+				fetch(route.url, {
+					method: route.method,
+					headers: {
+						"X-Requested-With": "fetch",
+						[CSRF_HEADER]: CSRF_TOKEN,
+						"Content-type": "application/json"
+					},
+					credentials: "same-origin",
+					body: JSON.stringify({
+						name: title.value,
+						description: description.value
+					})
+				}).catch(console.error);
+			});
+			
+			basicInfo.appendChild(buttonDiv);
+			
+			return basicInfo;
+		})());
+		
+		content.appendChild((() => {
 			const bDiv = document.createElement("div");
 			bDiv.innerHTML = "<h3>Brackets</h3>";
 			
