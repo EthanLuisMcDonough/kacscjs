@@ -31,7 +31,7 @@ import static configs.PrivateConfig.PASSWORD;
 public class Contest {
 	private List<Bracket> brackets = new ArrayList<Bracket>();
 	private HashMap<Integer, Criterion> criteria = new HashMap<Integer, Criterion>();
-	private Set<Integer> judgeIds = new HashSet<Integer>();
+	private Set<User> judges = new HashSet<User>();
 	private int id = -1, judgedEntryCount = -1, entryCount = -1;
 	private String name = null, description = null;
 	private long programId = -1;
@@ -46,7 +46,7 @@ public class Contest {
 	/**
 	 * Creates a contest in the database
 	 * 
-	 * @return A Contest object or null if there was an issue fetching generated ids
+	 * @return A Contest object
 	 * 
 	 * @param name
 	 *            The contest's name
@@ -62,7 +62,7 @@ public class Contest {
 	 * @throws SQLException
 	 */
 	public static Contest createContest(String name, String description, long programId, Date endDate,
-			List<Criterion> criteria, List<Bracket> brackets, Set<Integer> judgeIds, User user) throws SQLException {
+			List<Criterion> criteria, List<Bracket> brackets, Set<User> judges, User user) throws SQLException {
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			Contest contest = new Contest();
 			connection.setAutoCommit(false);
@@ -85,17 +85,7 @@ public class Contest {
 				try (ResultSet keys = insertContest.getGeneratedKeys()) {
 					if (keys != null && keys.next())
 						contest.setId(keys.getInt(1));
-					else {
-						connection.rollback();
-						return null;
-					}
-				} catch (SQLException e) {
-					connection.rollback();
-					throw e;
 				}
-			} catch (SQLException e) {
-				connection.rollback();
-				throw e;
 			}
 
 			for (Criterion criterion : criteria) {
@@ -109,26 +99,17 @@ public class Contest {
 					insertCriterion.executeUpdate();
 
 					try (ResultSet keys = insertCriterion.getGeneratedKeys()) {
-						if (keys != null) {
-							while (keys.next()) {
-								int id = keys.getInt(1);
-								criterion.setId(id);
-								contest.getCriteria().put(id, criterion);
-							}
-						} else {
-							connection.rollback();
-							return null;
+						if (keys != null && keys.next()) {
+							int id = keys.getInt(1);
+							criterion.setId(id);
+							contest.getCriteria().put(id, criterion);
 						}
-					} catch (SQLException e) {
-						connection.rollback();
-						throw e;
 					}
 				}
 			}
 			for (Bracket bracket : brackets) {
 				try (PreparedStatement insertBracket = connection.prepareStatement(
-						"INSERT INTO brackets (name, contest_id) VALUES (?, ?)",
-						Statement.RETURN_GENERATED_KEYS)) {
+						"INSERT INTO brackets (name, contest_id) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS)) {
 					insertBracket.setString(1, bracket.getName());
 					insertBracket.setInt(2, contest.getId());
 					insertBracket.executeUpdate();
@@ -138,20 +119,14 @@ public class Contest {
 							int id = keys.getInt(1);
 							bracket.setId(id);
 							contest.getBrackets().add(bracket);
-						} else {
-							connection.rollback();
-							return null;
 						}
-					} catch (SQLException e) {
-						connection.rollback();
-						throw e;
 					}
 				}
 			}
-			for (int judgeId : judgeIds) {
+			for (User judge : judges) {
 				try (PreparedStatement insertId = connection
 						.prepareStatement("INSERT INTO judges (user_id, contest_id) VALUES (?, ?)")) {
-					insertId.setInt(1, judgeId);
+					insertId.setInt(1, judge.getId());
 					insertId.setInt(2, contest.getId());
 					insertId.executeUpdate();
 				}
@@ -160,7 +135,7 @@ public class Contest {
 			contest.setJudgedEntryCount(0);
 			contest.setEntryCount(0);
 
-			contest.setJudgeIds(judgeIds);
+			contest.setJudges(judges);
 
 			contest.setUserJudgedEntryCount(null);
 			contest.setFetcher(user);
@@ -287,14 +262,20 @@ public class Contest {
 							contest.setBrackets(brackets);
 						}
 					}
-					try (PreparedStatement fetchJudgeIds = connection
-							.prepareStatement("SELECT user_id FROM judges WHERE contest_id = ?")) {
-						fetchJudgeIds.setInt(1, contest.getId());
-						try (ResultSet judgeIdRes = fetchJudgeIds.executeQuery()) {
-							Set<Integer> judgeIds = new HashSet<Integer>();
-							while (judgeIdRes.next())
-								judgeIds.add(judgeIdRes.getInt("user_id"));
-							contest.setJudgeIds(judgeIds);
+					try (PreparedStatement fetchJudges = connection
+							.prepareStatement("SELECT users.id AS id, users.kaid AS kaid, users.level AS level, users.name AS name FROM judges JOIN users ON judges.user_id = users.id WHERE contest_id = ?")) {
+						fetchJudges.setInt(1, contest.getId());
+						try (ResultSet judgesRes = fetchJudges.executeQuery()) {
+							Set<User> judges = new HashSet<User>();
+							while (judgesRes.next()) { 
+								User judge = new User();
+								judge.setId(judgesRes.getInt("id"));
+								judge.setKaid(judgesRes.getString("kaid"));
+								judge.setLevel(UserLevel.values()[judgesRes.getInt("level")]);
+								judge.setName(judgesRes.getString("name"));
+								judges.add(judge);
+							}
+							contest.setJudges(judges);
 						}
 					}
 					try (PreparedStatement checkStmt = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM (\n"
@@ -357,7 +338,7 @@ public class Contest {
 	 */
 	public boolean isJudgeable() {
 		return getEntryCount() > 0 && getJudgedEntryCount() != getEntryCount()
-				&& getEndDate().getTime() < System.currentTimeMillis() && getJudgeIds().contains(getFetcher().getId());
+				&& getEndDate().getTime() < System.currentTimeMillis() && getJudges().contains(getFetcher());
 	}
 
 	/**
@@ -369,7 +350,7 @@ public class Contest {
 	public boolean resultsDisclosed() {
 		return getFetcher().getLevel().ordinal() >= UserLevel.ADMIN.ordinal() || (getEntryCount() > 0
 				&& getJudgedEntryCount() == getEntryCount() && getEndDate().getTime() < System.currentTimeMillis()
-				&& getJudgeIds().contains(getFetcher().getId()));
+				&& getJudges().contains(getFetcher()));
 	}
 
 	/**
@@ -761,9 +742,9 @@ public class Contest {
 			brackets.add(bracketsIter.next().asJson());
 
 		ArrayNode judges = json.putArray("judges");
-		Iterator<Integer> judgesIter = getJudgeIds().iterator();
+		Iterator<User> judgesIter = getJudges().iterator();
 		while (judgesIter.hasNext())
-			judges.add(judgesIter.next());
+			judges.add(judgesIter.next().asJson());
 
 		return json;
 	}
@@ -870,20 +851,23 @@ public class Contest {
 			connection.commit();
 		}
 	}
-	
+
 	public HashMap<Integer, Criterion> replaceCriteria(List<Criterion> criteria) throws SQLException {
 		HashMap<Integer, Criterion> crit = new HashMap<Integer, Criterion>();
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			connection.setAutoCommit(false);
-			try (PreparedStatement deleteCritEntries = connection.prepareStatement("DELETE crit_entry FROM crit_entry JOIN criteria ON crit_entry.criterion_id = criteria.id WHERE criteria.contest_id = ?")) {
+			try (PreparedStatement deleteCritEntries = connection.prepareStatement(
+					"DELETE crit_entry FROM crit_entry JOIN criteria ON crit_entry.criterion_id = criteria.id WHERE criteria.contest_id = ?")) {
 				deleteCritEntries.setInt(1, getId());
 				deleteCritEntries.executeUpdate();
 			}
-			try (PreparedStatement deleteFeedback = connection.prepareStatement("DELETE feedback FROM feedback JOIN entries ON feedback.entry_id = entries.id WHERE entries.contest_id = ?")) {
+			try (PreparedStatement deleteFeedback = connection.prepareStatement(
+					"DELETE feedback FROM feedback JOIN entries ON feedback.entry_id = entries.id WHERE entries.contest_id = ?")) {
 				deleteFeedback.setInt(1, getId());
 				deleteFeedback.executeUpdate();
 			}
-			try (PreparedStatement deleteCriteria = connection.prepareStatement("DELETE FROM criteria WHERE contest_id = ?")) {
+			try (PreparedStatement deleteCriteria = connection
+					.prepareStatement("DELETE FROM criteria WHERE contest_id = ?")) {
 				deleteCriteria.setInt(1, getId());
 				deleteCriteria.executeUpdate();
 			}
@@ -908,9 +892,58 @@ public class Contest {
 			}
 			connection.commit();
 		}
-		
+
 		setCriteria(crit);
 		return crit;
+	}
+
+	public void deleteJudge(User user) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			connection.setAutoCommit(false);
+			try (PreparedStatement deleteCritEntry = connection.prepareStatement(
+					"DELETE crit_entry FROM crit_entry JOIN criteria ON crit_entry.criterion_id = criteria.id WHERE criteria.contest_id = ? AND crit_entry.user_id = ?")) {
+				deleteCritEntry.setInt(1, getId());
+				deleteCritEntry.setInt(2, user.getId());
+				deleteCritEntry.executeUpdate();
+			}
+			try (PreparedStatement deleteFeedback = connection.prepareStatement(
+					"DELETE feedback FROM feedback JOIN entries ON feedback.entry_id = entries.id WHERE entries.contest_id = ? AND feedback.user_id = ?")) {
+				deleteFeedback.setInt(1, getId());
+				deleteFeedback.setInt(2, user.getId());
+				deleteFeedback.executeUpdate();
+			}
+			try (PreparedStatement deleteJudge = connection
+					.prepareStatement("DELETE FROM judges WHERE user_id = ? AND contest_id = ? LIMIT 1")) {
+				deleteJudge.setInt(1, user.getId());
+				deleteJudge.setInt(2, getId());
+				deleteJudge.executeUpdate();
+			}
+			connection.commit();
+		}
+		getJudges().remove(user);
+	}
+
+	public boolean addJudge(User user) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			try (PreparedStatement check = connection
+					.prepareStatement("SELECT COUNT(*) AS cnt FROM judges WHERE user_id = ? AND contest_id = ?")) {
+				check.setInt(1, user.getId());
+				check.setInt(2, getId());
+				try (ResultSet res = check.executeQuery()) {
+					if (res.next() && res.getInt("cnt") > 0) {
+						return false;
+					}
+				}
+			}
+			try (PreparedStatement insert = connection
+					.prepareStatement("INSERT INTO judges (user_id, contest_id) VALUES (?, ?)")) {
+				insert.setInt(1, user.getId());
+				insert.setInt(2, getId());
+				insert.executeUpdate();
+			}
+			getJudges().add(user);
+			return true;
+		}
 	}
 
 	/* GETTERS AND SETTERS */
@@ -978,12 +1011,12 @@ public class Contest {
 		this.dateCreated = dateCreated;
 	}
 
-	public Set<Integer> getJudgeIds() {
-		return judgeIds;
+	public Set<User> getJudges() {
+		return judges;
 	}
 
-	public void setJudgeIds(Set<Integer> judgeIds) {
-		this.judgeIds = judgeIds;
+	public void setJudges(Set<User> judgeIds) {
+		this.judges = judgeIds;
 	}
 
 	public int getJudgedEntryCount() {

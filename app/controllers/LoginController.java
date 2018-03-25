@@ -84,17 +84,17 @@ public class LoginController extends Controller {
 		try (InputStream responseStream = res.getStream()) {
 			ObjectMapper mapper = new ObjectMapper();
 			JsonNode json = mapper.readTree(responseStream);
-			
+
 			if (json.get("kaid") == null || !json.get("kaid").isTextual()) {
 				return null;
 			}
-			
+
 			User user = User.getUserByKaid(json.get("kaid").asText());
-			
-			if(json.get("nickname") != null && json.get("nickname").isTextual()) {
+
+			if (json.get("nickname") != null && json.get("nickname").isTextual()) {
 				user.realSetName(json.get("nickname").asText());
 			}
-			
+
 			return user;
 		}
 	}

@@ -30,7 +30,9 @@ public class JavaScriptController extends Controller {
 				routes.javascript.ContestApiController.deleteEntry(),
 				routes.javascript.ContestApiController.addBracket(),
 				routes.javascript.ContestApiController.removeBracket(),
-				routes.javascript.ContestApiController.replaceCriteria()));
+				routes.javascript.ContestApiController.replaceCriteria(), 
+				routes.javascript.ContestApiController.addJudge(), 
+				routes.javascript.ContestApiController.deleteJudge()));
 	}
 
 	public Result userJs() {

@@ -98,6 +98,8 @@ public class ContestApiController extends Controller {
 
 		List<Bracket> brackets = new ArrayList<Bracket>();
 		Set<Integer> judgeIds = new HashSet<Integer>();
+		Set<User> judges = new HashSet<User>();
+		
 		List<Criterion> criteria = null;
 		try {
 			criteria = extractCriteria(criteriaJson);
@@ -159,10 +161,17 @@ public class ContestApiController extends Controller {
 			}
 			for (int id : judgeIds) {
 				try (PreparedStatement checkUsersStmt = connection
-						.prepareStatement("SELECT COUNT(*) AS num FROM users WHERE id = ?")) {
-					checkUsersStmt.setLong(1, id);
+						.prepareStatement("SELECT id, kaid, level, name FROM users WHERE id = 4 LIMIT 1")) {
+					checkUsersStmt.setInt(1, id);
 					try (ResultSet checkRes = checkUsersStmt.executeQuery()) {
-						if (checkRes.next() && checkRes.getLong("num") == 0) {
+						if (checkRes.next()) {
+							User judge = new User();
+							judge.setId(checkRes.getInt("id"));
+							judge.setKaid(checkRes.getString("kaid"));
+							judge.setName(checkRes.getString("name"));
+							judge.setLevel(UserLevel.values()[checkRes.getInt("level")]);
+							judges.add(judge);
+						} else {
 							return badRequest(jsonMsg(String.format("A user with the id %d does not exist", id)));
 						}
 					}
@@ -191,7 +200,7 @@ public class ContestApiController extends Controller {
 
 		Contest contest = null;
 		try {
-			contest = user.createContest(name, description, programId, new Date(endDate), criteria, brackets, judgeIds);
+			contest = user.createContest(name, description, programId, new Date(endDate), criteria, brackets, judges);
 		} catch (SQLException e) {
 			Logger.error(e.getMessage(), e);
 			return internalServerError(jsonMsg("Internal server error"));
@@ -224,7 +233,7 @@ public class ContestApiController extends Controller {
 
 			if (contest == null) {
 				return notFound(jsonMsg(String.format("A contest with the id %d does not exist", id)));
-			} else if (!contest.getJudgeIds().contains(user.getId())
+			} else if (!contest.getJudges().contains(user)
 					&& user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 				return forbidden(jsonMsg("You're not a judge of this contest"));
 			}
@@ -302,7 +311,7 @@ public class ContestApiController extends Controller {
 
 				if (contest == null) {
 					return notFound(jsonMsg(String.format("A contest with the id %d does not exist", contestId)));
-				} else if (!contest.getJudgeIds().contains(user.getId())
+				} else if (!contest.getJudges().contains(user)
 						&& user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 					return forbidden(jsonMsg("You're not a judge of this contest"));
 				}
@@ -332,7 +341,7 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> addBracket(int contestId) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -341,20 +350,20 @@ public class ContestApiController extends Controller {
 			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 				return forbidden(jsonMsg("Forbidden"));
 			}
-			
+
 			JsonNode body = request().body().asJson();
-			if(body == null || body.get("name") == null || !body.get("name").isTextual()) {
+			if (body == null || body.get("name") == null || !body.get("name").isTextual()) {
 				return badRequest(jsonMsg("Invalid name"));
 			}
-			
+
 			String name = body.get("name").asText();
-			
+
 			try {
 				Contest contest = user.getContestById(contestId);
 				if (contest == null) {
 					return notFound(jsonMsg("That contest doesn't exist"));
 				}
-				
+
 				return ok(contest.addBracket(name).asJson());
 			} catch (SQLException e) {
 				Logger.error("Error", e);
@@ -362,7 +371,7 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> removeBracket(int contestId, int bracketId) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -371,15 +380,15 @@ public class ContestApiController extends Controller {
 			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 				return forbidden();
 			}
-			
+
 			try {
 				Contest contest = user.getContestById(contestId);
 				if (contest == null) {
 					return notFound();
 				}
-				
+
 				contest.deleteBracket(bracketId);
-				
+
 				return ok("");
 			} catch (SQLException e) {
 				Logger.error("Error", e);
@@ -387,7 +396,7 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> getContests(int page, int limit) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
@@ -427,7 +436,7 @@ public class ContestApiController extends Controller {
 
 				if (contest == null) {
 					return notFound(jsonMsg(String.format("A contest with the id %d does not exist", id)));
-				} else if (!contest.getJudgeIds().contains(user.getId())
+				} else if (!contest.getJudges().contains(user)
 						&& user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 					return forbidden(jsonMsg("You're not a judge of this contest"));
 				}
@@ -577,7 +586,7 @@ public class ContestApiController extends Controller {
 				return forbidden("You can't judge a contest entry before the contest is over");
 			} else if (!contest.checkIfVoteIsVaild(votes)) {
 				return badRequest(jsonMsg("Bad request (invalid votes)"));
-			} else if (!contest.getJudgeIds().contains(user.getId())) {
+			} else if (!contest.getJudges().contains(user)) {
 				return forbidden(jsonMsg(
 						"You don't judge this contest." + (user.getLevel().ordinal() >= UserLevel.ADMIN.ordinal()
 								? "  You need to add yourself as a judge before you can vote"
@@ -750,31 +759,31 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> replaceCriteria(int id) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());
-			if(user == null) {
+			if (user == null) {
 				return unauthorized(jsonMsg("Unauthorized"));
 			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
 				return forbidden(jsonMsg("Forbidden"));
 			}
-			
+
 			JsonNode body = request().body().asJson();
-			if(body == null || !body.isArray()) {
+			if (body == null || !body.isArray()) {
 				return badRequest(jsonMsg("Bad request"));
 			}
-			
+
 			try {
 				Contest contest = user.getContestById(id);
 				if (contest == null) {
 					return notFound(jsonMsg("That contest doesn't exist"));
 				}
-				
+
 				List<Criterion> criteria = extractCriteria(body);
-				
+
 				contest.replaceCriteria(criteria);
-				
+
 				return ok(jsonMsg("Success"));
 			} catch (SQLException e) {
 				Logger.error("error", e);
@@ -785,22 +794,25 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	private class InvalidCriterionException extends NullPointerException {
 		private static final long serialVersionUID = 1L;
+
 		public InvalidCriterionException(String msg) {
 			super(msg);
 		}
 	}
-	
+
 	private class CriteriaSumOutOfBoundsException extends Exception {
 		private static final long serialVersionUID = 1L;
+
 		public CriteriaSumOutOfBoundsException(String msg) {
 			super(msg);
 		}
 	}
-	
-	private List<Criterion> extractCriteria(JsonNode critJson) throws InvalidCriterionException, CriteriaSumOutOfBoundsException {
+
+	private List<Criterion> extractCriteria(JsonNode critJson)
+			throws InvalidCriterionException, CriteriaSumOutOfBoundsException {
 		List<Criterion> criteria = new ArrayList<Criterion>();
 		Iterator<JsonNode> criteriaIterator = critJson.iterator();
 		int criteriaCounter = 0;
@@ -814,17 +826,78 @@ public class ContestApiController extends Controller {
 				c.setWeight(tok.get("weight").asInt());
 				criteria.add(c);
 			} else {
-				throw new InvalidCriterionException(String.format("Invalid criterion provided (position %d)", criteriaCounter));
+				throw new InvalidCriterionException(
+						String.format("Invalid criterion provided (position %d)", criteriaCounter));
 			}
 			criteriaCounter++;
 		}
-		
+
 		if (criteria.size() == 0
 				|| criteria.stream().mapToInt(c -> c.getWeight()).reduce((a, b) -> a + b).getAsInt() != 100
 				|| criteria.stream().filter(e -> e.getWeight() <= 0).count() > 0) {
 			throw new CriteriaSumOutOfBoundsException("Please make sure that all of your weights add up to 100");
 		}
-		
+
 		return criteria;
+	}
+
+	public CompletionStage<Result> deleteJudge(int contestId, int judgeUserId) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+
+			if (user == null) {
+				return unauthorized();
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden();
+			}
+
+			try {
+				Contest contest = user.getContestById(contestId);
+				if (contest == null) {
+					return notFound();
+				}
+				
+				User judge = User.getUserById(judgeUserId);
+				if(judge == null) {
+					return notFound();
+				}
+				
+				contest.deleteJudge(judge);
+
+				return ok("");
+			} catch (SQLException e) {
+				return internalServerError();
+			}
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
+
+	public CompletionStage<Result> addJudge(int contestId, int judgeUserId) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+
+			if (user == null) {
+				return unauthorized(jsonMsg("Unauthorized"));
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden(jsonMsg("Forbidden"));
+			}
+
+			try {
+				Contest contest = user.getContestById(contestId);
+				if (contest == null) {
+					return notFound(jsonMsg("That contest doesn't exist"));
+				}
+
+				User judge = User.getUserById(judgeUserId);
+				if (judge == null) {
+					return notFound(jsonMsg("That user doesn't exist"));
+				}
+
+				boolean success = contest.addJudge(judge);
+
+				return success ? ok(judge.asJson()) : badRequest(jsonMsg("That user already judges this contest"));
+			} catch (SQLException e) {
+				return internalServerError(jsonMsg("Internal server error"));
+			}
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
 }

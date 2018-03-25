@@ -19,3 +19,11 @@
 .add-bracket button {
 	margin-left: 10px;
 }
+
+.judge-chip {
+	margin-left: 5px;
+}
+
+.judge-chips {
+	padding-bottom: 5px;
+}

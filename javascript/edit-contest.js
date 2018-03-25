@@ -4,6 +4,70 @@
 	const contestRoute = jsRoutes.controllers.ContestApiController.getContest(CONTEST_ID);
 	const replaceCriteriaRoute = jsRoutes.controllers.ContestApiController.replaceCriteria(CONTEST_ID);
 	
+	const Judge = (() => {
+		let count = 0;
+		return class Judge extends Component {
+			constructor(json) {
+				count++;
+				super(json);
+				this.userId = json.id;
+			}
+			generateDom(json) {
+				const dialog = new MDLDialog("WARNING", `Removing ${json.name} from this contest's juding panel will erase all of their judgements.  This action can't be undone.`, [
+					{
+						label: "Cancel",
+						onClick() {
+							dialog.close();
+						}
+					},
+					{
+						label: "Remove",
+						color: "#ff5555",
+						onClick: () => {
+							const route = jsRoutes.controllers.ContestApiController.deleteJudge(CONTEST_ID, json.id);
+							fetch(route.url, {
+								method: route.method,
+								headers: {
+									"X-Requested-With": "fetch",
+									[CSRF_HEADER]: CSRF_TOKEN
+								},
+								credentials: "same-origin"
+							}).catch(console.error);
+							this.remove();
+							dialog.close();
+						}
+					}
+				]);
+				dialog.appendTo(document.body);
+				const chip = document.createElement("span");
+				chip.className = "mdl-chip mdl-chip--deletable judge-chip";
+				const label = document.createElement("span");
+				label.className = "mdl-chip__text";
+				const link = document.createElement("a");
+				link.href = `https://www.khanacademy.org/profile/${json.kaid}`;
+				link.textContent = json.name;
+				link.setAttribute("target", "_blank");
+				label.appendChild(link);
+				const close = document.createElement("button");
+				close.addEventListener("click", e => {
+					if(count > 1) {
+						dialog.showModal();
+					}
+				});
+				close.setAttribute("type", "button");
+				close.className = "mdl-chip__action";
+				close.innerHTML = `<i class="material-icons">cancel</i>`;
+		        chip.appendChild(label);
+		        chip.appendChild(close);
+		        return chip;
+			}
+			remove() {
+				count--;
+				super.remove();
+			}
+		}
+	})();
+	
 	function genBracket(bracket) {
 		const route = jsRoutes.controllers.ContestApiController.removeBracket(CONTEST_ID, bracket.id);
 		const b = new Bracket(() => {
@@ -28,6 +92,7 @@
 			h2.textContent = `Edit ${data.name}`;
 			return h2;
 		})());
+		
 		content.appendChild((() => {
 			const bDiv = document.createElement("div");
 			bDiv.innerHTML = "<h3>Brackets</h3>";
@@ -77,6 +142,86 @@
 			brackets.appendChild(bDiv);
 			
 			return brackets;
+		})());
+		
+		content.appendChild((() => {
+			const judges = document.createElement("div");
+			judges.id = "judges";
+			judges.className = "new-contest-fieldset mdl-card";
+			judges.innerHTML = "<h3>Judges</h3>";
+			
+			const chips = document.createElement("div");
+			chips.className = "judge-chips";
+			
+			const addUserDialog = (() => {
+				const insertForm = document.createElement("form");
+				const userId = new MDLTextfield("User ID", true, "\\d+", "Invalid ID");
+				userId.appendTo(insertForm);
+				const errorText = document.createElement("p");
+				errorText.className = "error-text";
+				insertForm.appendChild(errorText);
+				
+				function insert() {
+					errorText.textContent = "";
+					if (userId.value.length != 0) {
+						const addJudgeRoute = jsRoutes.controllers.ContestApiController.addJudge(CONTEST_ID, userId.value);
+						fetch(addJudgeRoute.url, {
+							method: addJudgeRoute.method,
+							headers: {
+								"X-Requested-With": "fetch",
+								[CSRF_HEADER]: CSRF_TOKEN
+							},
+							credentials: "same-origin"
+						}).then(response => {
+							response.json().then(data => {
+								if (response.status >= 200 && response.status < 300) {
+									(new Judge(data)).appendTo(chips);
+									addUserDialog.close();
+									insertForm.reset();
+								} else {
+									errorText.textContent = data.message;
+								}
+							}).catch(e => {
+								errorText.textContent = "Error";
+								console.log(e);
+							});
+						}).catch(e => {
+							errorText.textContent = "Error";
+							console.log(e); 
+						});
+					}
+				}
+				
+				insertForm.addEventListener("submit", e => {
+					e.preventDefault();
+					insert();
+				})
+				
+				return new MDLDialog("Add judge", insertForm, [
+					{
+						label: "Cancel",
+						onClick() {
+							addUserDialog.close();
+						}
+					},
+					{
+						label: "Add judge",
+						color: "#00b200",
+						onClick: insert
+					}
+				]);
+			})();
+			addUserDialog.appendTo(document.body);
+			
+			data.judges.forEach(e => (new Judge(e)).appendTo(chips))
+			judges.appendChild(chips);
+			const buttonDiv = document.createElement("div");
+			buttonDiv.className = "button-div";
+			const addUser = new MDLAccentRippleBtn("Add judge");
+			addUser.appendTo(buttonDiv);
+			addUser.addOnClick(addUserDialog.showModal.bind(addUserDialog));
+			judges.appendChild(buttonDiv);
+			return judges;
 		})());
 		
 		content.appendChild((() => {

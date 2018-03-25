@@ -15,6 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -41,9 +42,15 @@ public class User {
 	 * @param user
 	 *            The user
 	 */
-	public boolean is(User user) {
-		return id == user.getId();
+	@Override
+	public boolean equals(Object user) {
+		return user instanceof User && getId() == ((User) user).getId();
 	}
+	
+	@Override
+	public int hashCode() {
+        return Objects.hash(id);
+    }
 
 	public Contest getContestById(Connection connection, int id) throws SQLException {
 		return Contest.getContestById(connection, id, this);
@@ -54,13 +61,13 @@ public class User {
 	}
 
 	public Contest createContest(String name, String description, long programId, Date endDate,
-			List<Criterion> criteria, List<Bracket> brackets, Set<Integer> judgeIds) throws SQLException {
-		return Contest.createContest(name, description, programId, endDate, criteria, brackets, judgeIds, this);
+			List<Criterion> criteria, List<Bracket> brackets, Set<User> judges) throws SQLException {
+		return Contest.createContest(name, description, programId, endDate, criteria, brackets, judges, this);
 	}
 
 	public void realSetName(String name) throws SQLException {
 		name = name.trim();
-		name = name.length() > 255 ? name.substring(0, 255) : name; 
+		name = name.length() > 255 ? name.substring(0, 255) : name;
 
 		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
 			try (PreparedStatement stmt = connection

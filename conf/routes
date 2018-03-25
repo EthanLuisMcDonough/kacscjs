@@ -30,6 +30,8 @@ POST    /api/contests                                      controllers.ContestAp
 PATCH   /api/contests/:id/criteria                         controllers.ContestApiController.replaceCriteria(id: Int)
 POST    /api/contests/:id/brackets                         controllers.ContestApiController.addBracket(id: Int)
 DELETE  /api/contests/:contestId/brackets/:bracketId       controllers.ContestApiController.removeBracket(contestId: Int, bracketId: Int)
+PUT     /api/contests/:contestId/judges/:userId            controllers.ContestApiController.addJudge(contestId: Int, userId: Int)
+DELETE  /api/contests/:contestId/judges/:userId            controllers.ContestApiController.deleteJudge(contestId: Int, userId: Int)
 PUT     /api/contests/:id/entries/:programId               controllers.ContestApiController.newEntry(id: Int, programId: Long)
 POST    /api/contests/:id/entries/addallspinoffs           controllers.ContestApiController.addAllSpinOffs(id: Int)
 DELETE  /api/contests/:id/entries/:entryId                 controllers.ContestApiController.deleteEntry(id: Int, entryId: Int)

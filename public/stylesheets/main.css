@@ -7,11 +7,11 @@
 }
 
 .button-div {
-	margin: 10px 5px;
+	margin: 5px 10px;
 }
 
 .button-div button {
-	margin: 7px 5px;
+	margin-left: 5px;
 }
 
 .mdl-layout__obfuscator.is-visible, .mdl-layout__drawer.is-visible {
