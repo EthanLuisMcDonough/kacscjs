@@ -1,7 +1,12 @@
-@()
+@import models.User
+
+@(user: User = null)
 
 <footer class="mdl-mini-footer">
 	<div class="mdl-mini-footer--left-section">
 		 This product uses the Khan Academy API but is not endorsed or certified by Khan Academy (<a href="https://www.khanacademy.org/" target="_blank">www.khanacademy.org</a>).  <a href="https://github.com/ethanluismcdonough/kacscjs" target="_blank">GitHub</a> 
+		 @if(user != null) {
+		 	<span> | Signed in as <a href="@user.profileUrl" target="_blank">@user.getName</a></span>
+		 }
 	</div>
 </footer>

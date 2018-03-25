@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.http.client.utils.URIBuilder;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -398,6 +400,11 @@ public class User {
 		json.put("kaid", getKaid());
 		json.put("level", getLevel().ordinal());
 		return json;
+	}
+
+	public String profileUrl() {
+		return new URIBuilder().setScheme("https").setHost("www.khanacademy.org")
+				.setPath(String.format("/profile/%s", getKaid())).toString();
 	}
 
 	/* GETTERS AND SETTERS */
