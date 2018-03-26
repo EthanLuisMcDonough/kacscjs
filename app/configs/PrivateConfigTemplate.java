@@ -6,7 +6,7 @@ public class PrivateConfigTemplate {
 	public static final String KA_CONSUMER_KEY = "<API KEY>";
 	public static final String KA_CONSUMER_SECRET = "<API SECRET>";
 	
-	// Your JDBC connection string
+	// Your JDBC connection URL (https://docs.oracle.com/javase/tutorial/jdbc/basics/connecting.html)
 	public static final String CONNECTION_STRING = "jdbc:mysql://localhost:3306/kacscjs";
 	public static final String USERNAME = "<USERNAME>"; // the database user
 	public static final String PASSWORD = "<PASSWORD>"; // the user's password

@@ -960,6 +960,17 @@ public class Contest {
 		}
 	}
 
+	public void realSetEndDate(Date date) throws SQLException {
+		try (Connection connection = DriverManager.getConnection(CONNECTION_STRING, USERNAME, PASSWORD)) {
+			try (PreparedStatement updateEndDate = connection
+					.prepareStatement("UPDATE contests SET end_date = ? WHERE id = ? LIMIT 1")) {
+				updateEndDate.setLong(1, date.getTime());
+				updateEndDate.setInt(2, getId());
+				updateEndDate.executeUpdate();
+			}
+		}
+	}
+	
 	private String nameTrim(String name) {
 		name = name.trim();
 		return name.length() <= 255 ? name : name.substring(0, 255);

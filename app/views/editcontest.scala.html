@@ -3,6 +3,6 @@
 
 @(contest: Int, user: User)
 
-@standardone("Edit contest", List(routes.Assets.versioned("stylesheets/edit-contest.css").url, routes.Assets.versioned("stylesheets/new-contest.css").url), List(routes.JavaScriptController.defineContest(contest).url, routes.Assets.versioned("javascripts/contest-components.js").url, routes.Assets.versioned("javascripts/edit-contest.js").url), user) {
+@standardone("Edit contest", List(routes.Assets.versioned("libraries/pikaday.min.css").url, routes.Assets.versioned("stylesheets/edit-contest.css").url, routes.Assets.versioned("stylesheets/new-contest.css").url), List(routes.Assets.versioned("libraries/pikaday.min.js").url, routes.JavaScriptController.defineContest(contest).url, routes.Assets.versioned("javascripts/contest-components.js").url, routes.Assets.versioned("javascripts/edit-contest.js").url), user) {
 	<div id="content"></div>
 }

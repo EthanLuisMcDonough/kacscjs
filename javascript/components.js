@@ -82,13 +82,13 @@ const MDLTextfield = class MDLTextfield extends Component {
 		super(label, required, pattern, errorText, content);
 	}
 	get inputEl() {
-		return this.dom.getElementsByClassName("mdl-textfield__input")[0]
+		return this.dom.getElementsByClassName("mdl-textfield__input")[0];
 	}
 	get value() {
-		return this.dom.getElementsByClassName("mdl-textfield__input")[0].value;
+		return this.inputEl.value;
 	}
 	set value(v) {
-		this.dom.getElementsByClassName("mdl-textfield__input")[0].value = v;
+		this.inputEl.value = v;
 	}
 	getTextContent() {
 		return this.value;

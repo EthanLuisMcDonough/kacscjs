@@ -13,7 +13,7 @@
 		endDateField = document.getElementById("contest-end-date-field"),
 		endTimeField = document.getElementById("contest-end-time-field");
 	
-	endDateField.addEventListener("input", e => e.preventDefault());
+	endDateField.addEventListener("keydown", e => e.preventDefault());
 	
 	const datePicker = new Pikaday({ 
 		field: endDateField,

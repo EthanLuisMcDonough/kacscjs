@@ -134,6 +134,63 @@
 		})());
 		
 		content.appendChild((() => {
+			const editEndDate = document.createElement("form");
+			editEndDate.id = "edit-end-date";
+			editEndDate.innerHTML = "<h3>Reschedule contest end date</h3>";
+			editEndDate.className = "new-contest-fieldset mdl-card";
+			
+			const currentEndDate = new Date(data.endDate);
+			
+			const date = new MDLTextfield("End date (your current time zone)", true, "[A-Za-z]{3} [A-Za-z]{3} \\d{2} \\d{4}", "Invalid date format");
+			date.inputEl.addEventListener("keydown", e => e.preventDefault());
+			const datePicker = new Pikaday({
+			    field: date.inputEl,
+			    defaultDate: currentEndDate,
+			    setDefaultDate: true,
+			    onSelect(dt) {
+					date.dom.className = date.dom.className.replace(/is-invalid/, "is-dirty");
+			    }
+			});
+			date.dom.className = date.dom.className.replace(/is-invalid/, "is-dirty");
+			date.appendTo(editEndDate);
+			
+			const time = new MDLTextfield("End time (00:00 - 23:59)", true, "(2[0-3]|[01]\\d):([0-5]\\d)", "Invalid time format", `${currentEndDate.getHours().toString().padStart(2, "0")}:${currentEndDate.getMinutes().toString().padStart(2, "0")}`);
+			time.appendTo(editEndDate);
+			
+			const buttonDiv = document.createElement("div");
+			buttonDiv.className = "button-div";
+			
+			const edit = new MDLAccentRippleBtn("Reschedule");
+			edit.dom.setAttribute("type", "submit");
+			edit.appendTo(buttonDiv);
+			
+			editEndDate.appendChild(buttonDiv);
+			
+			editEndDate.addEventListener("submit", e => {
+				e.preventDefault();
+				const newEndDate = datePicker.getDate();
+				const [ , timeHour, timeMinute ] = /^(2[0-3]|[01]\d):([0-5]\d)$/.exec(time.value);
+				newEndDate.setHours(parseInt(timeHour, 10));
+				newEndDate.setMinutes(parseInt(timeMinute, 10));
+				const route = jsRoutes.controllers.ContestApiController.editEndDate(CONTEST_ID);
+				fetch(route.url, {
+					method: route.method,
+					headers: {
+						"X-Requested-With": "fetch",
+						[CSRF_HEADER]: CSRF_TOKEN,
+						"Content-type": "application/json"
+					},
+					credentials: "same-origin",
+					body: JSON.stringify({
+						endDate: newEndDate.getTime()
+					})
+				}).catch(console.error);
+			});
+			
+			return editEndDate;
+		})());
+		
+		content.appendChild((() => {
 			const bDiv = document.createElement("div");
 			bDiv.innerHTML = "<h3>Brackets</h3>";
 			

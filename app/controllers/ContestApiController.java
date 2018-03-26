@@ -933,4 +933,37 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
+	
+	public CompletionStage<Result> editEndDate(int id) {
+		return CompletableFuture.supplyAsync(() -> {
+			User user = User.getFromSession(session());
+
+			if (user == null) {
+				return unauthorized(jsonMsg("Unauthorized"));
+			} else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+				return forbidden(jsonMsg("Forbidden"));
+			}
+
+			JsonNode body = request().body().asJson();
+
+			if (body.get("endDate") == null || !body.get("endDate").isNumber()) {
+				return badRequest(jsonMsg("Bad request"));
+			}
+
+			Date endDate = new Date(body.get("endDate").asLong());
+
+			try {
+				Contest contest = user.getContestById(id);
+				if (contest == null) {
+					return notFound(jsonMsg("That contest doesn't exist"));
+				}
+
+				contest.realSetEndDate(endDate);
+
+				return ok(jsonMsg("Success"));
+			} catch (SQLException e) {
+				return internalServerError(jsonMsg("Internal server error"));
+			}
+		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+	}
 }
