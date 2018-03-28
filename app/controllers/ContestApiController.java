@@ -933,7 +933,7 @@ public class ContestApiController extends Controller {
 			}
 		}, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
 	}
-	
+
 	public CompletionStage<Result> editEndDate(int id) {
 		return CompletableFuture.supplyAsync(() -> {
 			User user = User.getFromSession(session());

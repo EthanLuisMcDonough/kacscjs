@@ -970,7 +970,7 @@ public class Contest {
 			}
 		}
 	}
-	
+
 	private String nameTrim(String name) {
 		name = name.trim();
 		return name.length() <= 255 ? name : name.substring(0, 255);
