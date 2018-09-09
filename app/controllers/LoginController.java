@@ -17,6 +17,8 @@ import play.mvc.Controller;
 import play.mvc.Http.Request;
 import play.mvc.Result;
 
+import com.typesafe.config.Config;
+
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,20 +31,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
-import static configs.PrivateConfig.KA_CONSUMER_KEY;
-import static configs.PrivateConfig.KA_CONSUMER_SECRET;
-
 public class LoginController extends Controller {
     private HttpExecutionContext httpExecutionContext;
     private final SecureRandom generator = new SecureRandom();
     private final Base64.Encoder b64Encoder = Base64.getEncoder().withoutPadding();
     private final int VERIF_TOKEN_LENGTH = 64;
+    private final Config conf;
     private Database db;
 
     @Inject
-    public LoginController(Database db, HttpExecutionContext ec) {
+    public LoginController(Database db, HttpExecutionContext ec, Config conf) {
         this.httpExecutionContext = ec;
         this.db = db;
+        this.conf = conf;
     }
 
     private String genOAuthVerifToken() {
@@ -51,13 +52,13 @@ public class LoginController extends Controller {
         return b64Encoder.encodeToString(randomBytes).replaceAll("\\+", "-").replaceAll("\\/", "_");
     }
 
-    public String authURL() throws IOException, InterruptedException, ExecutionException {
+    public String authURL(final String consumerKey, final String consumerSecret) throws IOException, InterruptedException, ExecutionException {
         String token = genOAuthVerifToken();
         session("temp-oauth-verif-token", token);
         String oauthCallback = routes.LoginController.login(token).absoluteURL(request());
 
-        KAOAuth10aService kaservice = (KAOAuth10aService) new KAServiceBuilder(KA_CONSUMER_KEY)
-                .apiSecret(KA_CONSUMER_SECRET).callback(oauthCallback).build(KhanApi.instance());
+        KAOAuth10aService kaservice = (KAOAuth10aService) new KAServiceBuilder(consumerKey)
+                .apiSecret(consumerSecret).callback(oauthCallback).build(KhanApi.instance());
 
         OAuth1RequestToken requestToken = null;
         requestToken = kaservice.getRequestToken();
@@ -65,10 +66,10 @@ public class LoginController extends Controller {
         return kaservice.getAuthorizationUrl(requestToken);
     }
 
-    public User getUserFromOAuthRequestToken(String tokenPublic, String tokenSecret, String verifier)
+    public User getUserFromOAuthRequestToken(String tokenPublic, String tokenSecret, String verifier, final String consumerKey, final String consumerSecret)
             throws IOException, InterruptedException, ExecutionException, SQLException {
-        KAOAuth10aService kaservice = (KAOAuth10aService) new KAServiceBuilder(KA_CONSUMER_KEY)
-                .apiSecret(KA_CONSUMER_SECRET).build(KhanApi.instance());
+        KAOAuth10aService kaservice = (KAOAuth10aService) new KAServiceBuilder(consumerKey)
+                .apiSecret(consumerSecret).build(KhanApi.instance());
 
         OAuth1RequestToken requestToken = new OAuth1RequestToken(tokenPublic, tokenSecret);
         OAuth1AccessToken accessToken = kaservice.getAccessToken(requestToken, verifier);
@@ -98,12 +99,20 @@ public class LoginController extends Controller {
     }
 
     public CompletionStage<Result> getAuthURL() {
+        final String key = conf.getString("ka.key"),
+                secret = conf.getString("ka.secret");
+
+        if (key == null || secret == null) {
+            return CompletableFuture.completedFuture(internalServerError(
+                    "ka.key or ka.secret is missing in configuration.conf"));
+        }
+
         return CompletableFuture.supplyAsync(() -> {
             if (User.getFromSession(session()) != null) {
                 return temporaryRedirect(routes.ContestUIController.contests().url());
             }
             try {
-                return temporaryRedirect(authURL());
+                return temporaryRedirect(authURL(key, secret));
             } catch (Exception e) {
                 Logger.error(e.getMessage(), e);
                 throw new Error("Couldn't fetch auth url");
@@ -115,6 +124,14 @@ public class LoginController extends Controller {
     }
 
     public CompletionStage<Result> login(String token) {
+        final String key = conf.getString("ka.key"),
+                secret = conf.getString("ka.secret");
+
+        if (key == null || secret == null) {
+            return CompletableFuture.completedFuture(internalServerError(
+                    "ka.key or ka.secret is missing in configuration.conf"));
+        }
+
         return CompletableFuture.supplyAsync(() -> {
             Request req = request();
             Map<String, String[]> query = req.queryString();
@@ -133,7 +150,7 @@ public class LoginController extends Controller {
 
             User user = null;
             try {
-                user = getUserFromOAuthRequestToken(tokenPublic, tokenSecret, verifier);
+                user = getUserFromOAuthRequestToken(tokenPublic, tokenSecret, verifier, key, secret);
             } catch (Exception e) {
                 Logger.error(e.getMessage(), e);
                 return internalServerError(views.html.error500.render(null));

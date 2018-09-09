@@ -12,5 +12,5 @@ A contest judging system for the @Khan Academy Computer Programming section
 8. `playGenerateSecret`
 9. Open conf/application.conf
  and set `play.http.secret.key` to the generated secret's value
-10. Make a copy of app/configs/PrivateConfigTemplate.java and fill out the template.  Rename this new file PrivateConfig.java
+10. Finish filling out all other fields in application.conf that are set to `"changeme"`
 11. `run` to run the app in dev mode
