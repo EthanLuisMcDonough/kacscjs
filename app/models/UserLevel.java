@@ -1,5 +1,5 @@
 package models;
 
 public enum UserLevel {
-	REMOVED, MEMBER, ADMIN
+    REMOVED, MEMBER, ADMIN
 }

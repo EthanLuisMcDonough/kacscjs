@@ -32,7 +32,7 @@
 		method: contestRoute.method,
 		credentials: "same-origin"
 	}).then(response => response.status >= 200 && response.status < 300 ? response.json() : Promise.reject(response)).then(contestData => {
-		if (contestData.judges.indexOf(User.ID) != -1 && contestData.userCanJudge) {
+		if (contestData.userCanJudge) {
 			const entryRoute = jsRoutes.controllers.ContestApiController.getEntry(CONTEST_ID, ENTRY_ID);
 			fetch(entryRoute.url, {
 				method: entryRoute.method,

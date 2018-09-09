@@ -1,10 +1,10 @@
 package models;
 
 public enum UserIdType {
-	ID, KAID;
+    ID, KAID;
 
-	@Override
-	public String toString() {
-		return name().toLowerCase();
-	}
+    @Override
+    public String toString() {
+        return name().toLowerCase();
+    }
 }

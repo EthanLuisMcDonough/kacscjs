@@ -5,6 +5,7 @@ public/javascripts
 app/configs/PrivateConfig.java
 *.jar
 *.class
+*.iml
 build
 bin
 project/project
@@ -14,3 +15,4 @@ project/target
 .gradle
 .classpath
 .g8
+.idea
