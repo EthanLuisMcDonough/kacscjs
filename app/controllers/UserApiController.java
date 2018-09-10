@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import models.User;
 import models.UserLevel;
+import contexts.DBContext;
+import contexts.GeneralHttpPool;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -14,7 +16,6 @@ import org.apache.http.util.EntityUtils;
 import play.Logger;
 import play.db.Database;
 import play.libs.Json;
-import play.libs.concurrent.HttpExecutionContext;
 import play.mvc.Controller;
 import play.mvc.Result;
 
@@ -30,16 +31,20 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Pattern;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
 public class UserApiController extends Controller {
-    private HttpExecutionContext httpExecutionContext;
-    private Pattern kaidRegex = Pattern.compile("kaid_\\d{20,30}");
+    private final Pattern kaidRegex = Pattern.compile("kaid_\\d{20,30}");
     private final CloseableHttpClient httpclient = req.Http.client;
-    private Database db;
+    private final Database db;
+    private final DBContext dbCtx;
+    private final GeneralHttpPool httpCtx;
 
     @Inject
-    public UserApiController(Database db, HttpExecutionContext ec) {
-        httpExecutionContext = ec;
+    public UserApiController(Database db, DBContext dbCtx, GeneralHttpPool httpCtx) {
         this.db = db;
+        this.dbCtx = dbCtx;
+        this.httpCtx = httpCtx;
     }
 
     private ObjectNode jsonMsg(String message) {
@@ -54,15 +59,15 @@ public class UserApiController extends Controller {
     }
 
     public CompletionStage<Result> getUsers(int page, int limit) {
+        User user = User.getFromSession(session());
+
+        if (user == null) {
+            return completedFuture(unauthorized(jsonMsg("Unauthorized")));
+        } else if (user.getLevel().ordinal() <= UserLevel.REMOVED.ordinal()) {
+            return completedFuture(forbidden(jsonMsg("Forbidden")));
+        }
+
         return CompletableFuture.supplyAsync(() -> {
-            User user = User.getFromSession(session());
-
-            if (user == null) {
-                return unauthorized(jsonMsg("Unauthorized"));
-            } else if (user.getLevel().ordinal() <= UserLevel.REMOVED.ordinal()) {
-                return forbidden(jsonMsg("Forbidden"));
-            }
-
             List<User> users = new ArrayList<>();
             try (Connection connection = db.getConnection(true)) {
                 users = User.getAllUsers(page, limit, connection);
@@ -77,23 +82,23 @@ public class UserApiController extends Controller {
                 usersJson.add(userIter.next().asJson());
 
             return ok(usersJson);
-        }, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+        }, dbCtx).exceptionally(this::internalServerErrorApiCallback);
     }
 
     public CompletionStage<Result> createUser(String kaid) {
+        final User user = User.getFromSession(session());
+
+        if (user == null) {
+            return completedFuture(unauthorized(jsonMsg("Unauthorized")));
+        } else if (user.getLevel() != UserLevel.ADMIN) {
+            return completedFuture(forbidden(jsonMsg("Forbidden")));
+        }
+
+        if (!kaidRegex.matcher(kaid).matches()) {
+            return completedFuture(badRequest(jsonMsg("Invalid kaid")));
+        }
+
         return CompletableFuture.supplyAsync(() -> {
-            User user = User.getFromSession(session());
-
-            if (user == null) {
-                return unauthorized(jsonMsg("Unauthorized"));
-            } else if (user.getLevel() != UserLevel.ADMIN) {
-                return forbidden(jsonMsg("Forbidden"));
-            }
-
-            if (!kaidRegex.matcher(kaid).matches()) {
-                return badRequest(jsonMsg("Invalid kaid"));
-            }
-
             String name = "";
 
             HttpGet programCheckReq = new HttpGet(
@@ -129,58 +134,58 @@ public class UserApiController extends Controller {
                 Logger.error(e.getMessage(), e);
                 return internalServerError(jsonMsg("Internal server error"));
             }
-        }, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+        }, httpCtx).exceptionally(this::internalServerErrorApiCallback);
     }
 
     public CompletionStage<Result> removeUser(int id) {
+        final User user = User.getFromSession(session());
+
+        if (user == null) {
+            return completedFuture(unauthorized());
+        } else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+            return completedFuture(forbidden());
+        }
+
         return CompletableFuture.supplyAsync(() -> {
-            User user = User.getFromSession(session());
-
-            if (user == null) {
-                return unauthorized();
-            } else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
-                return forbidden();
-            }
-
             try (Connection connection = db.getConnection(true)) {
                 User userToRemove = User.getUserById(id, connection);
                 if (userToRemove == null)
                     return notFound();
                 if (userToRemove.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
                     user.setOtherUserLevel(userToRemove, UserLevel.REMOVED, connection);
+                    return ok("");
                 } else
                     return forbidden();
             } catch (SQLException e) {
                 Logger.error("Error", e);
+                return internalServerError();
             }
-
-            return ok("");
-        }, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+        }, dbCtx).exceptionally(this::internalServerErrorApiCallback);
     }
 
     public CompletionStage<Result> promoteUser(int id) {
+        final User user = User.getFromSession(session());
+
+        if (user == null) {
+            return completedFuture(unauthorized());
+        } else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
+            return completedFuture(forbidden());
+        }
+
         return CompletableFuture.supplyAsync(() -> {
-            User user = User.getFromSession(session());
-
-            if (user == null) {
-                return unauthorized();
-            } else if (user.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
-                return forbidden();
-            }
-
             try (Connection connection = db.getConnection(true)) {
                 User userToRemove = User.getUserById(id, connection);
                 if (userToRemove == null)
                     return notFound();
-                if (userToRemove.getLevel().ordinal() < UserLevel.ADMIN.ordinal())
+                if (userToRemove.getLevel().ordinal() < UserLevel.ADMIN.ordinal()) {
                     user.setOtherUserLevel(userToRemove, UserLevel.ADMIN, connection);
-                else
+                    return ok("");
+                } else
                     return badRequest();
             } catch (SQLException e) {
                 Logger.error("Error", e);
+                return internalServerError();
             }
-
-            return ok("");
-        }, httpExecutionContext.current()).exceptionally(this::internalServerErrorApiCallback);
+        }, dbCtx).exceptionally(this::internalServerErrorApiCallback);
     }
 }

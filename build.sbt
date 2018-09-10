@@ -15,3 +15,4 @@ libraryDependencies += "org.apache.httpcomponents" % "httpclient" % "4.5.5"
 libraryDependencies += "org.webjars" % "material-design-lite" % "1.3.0"
 libraryDependencies += "org.webjars" % "material-design-icons" % "3.0.1"
 libraryDependencies += javaJdbc
+libraryDependencies += ws

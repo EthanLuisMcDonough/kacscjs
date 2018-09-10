@@ -504,8 +504,10 @@ public class Contest {
     public InsertedEntry addEntry(long programId, Connection connection) throws SQLException {
         InsertedEntry entry = new InsertedEntry();
         entry.setProgramId(programId);
-        try (PreparedStatement checkStmt = connection.prepareStatement("SELECT id FROM entries WHERE program_id = ?")) {
+        try (PreparedStatement checkStmt = connection.prepareStatement(
+                "SELECT id FROM entries WHERE program_id = ? AND contest_id = ?")) {
             checkStmt.setLong(1, programId);
+            checkStmt.setInt(2, getId());
             try (ResultSet checkRes = checkStmt.executeQuery()) {
                 if (checkRes.next()) {
                     entry.setId(checkRes.getInt("id"));
