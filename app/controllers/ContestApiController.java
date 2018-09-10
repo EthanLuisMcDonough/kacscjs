@@ -6,21 +6,16 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import models.*;
 import contexts.*;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
 import play.Logger;
 import play.db.Database;
 import play.libs.Json;
+import play.libs.ws.WSClient;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.Http.Request;
-import req.ArrayListExceptions;
-import req.Http;
-import req.SpinOffIter;
+import req.SpinOffLoader;
 
 import javax.inject.Inject;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,20 +28,31 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public class ContestApiController extends Controller {
     private final DBContext dbCtx;
-    private final GeneralHttpPool httpCtx;
-    private final CloseableHttpClient httpclient = Http.client;
-    private Database db;
+    private final Database db;
+    private final WSClient ws;
+    private final SpinOffLoader loader;
 
     @Inject
-    public ContestApiController(Database db, DBContext dbCtx, GeneralHttpPool httpCtx) {
+    public ContestApiController(Database db, DBContext dbCtx, GeneralHttpPool httpCtx, WSClient ws) {
         this.db = db;
         this.dbCtx = dbCtx;
-        this.httpCtx = httpCtx;
+        this.ws = ws;
+        this.loader = new SpinOffLoader(ws);
     }
 
     private Result internalServerErrorApiCallback(Throwable e) {
         Logger.error(e.getMessage(), e);
         return internalServerError(jsonMsg("Internal server error"));
+    }
+
+    private CompletionStage<Boolean> programExists(final long programId) {
+        return ws.url("https://www.khanacademy.org/api/labs/scratchpads/" + programId)
+                .addQueryParameter("projection", "{\"id\":1}")
+                .get()
+                .thenApply(response -> {
+                    int code = response.getStatus();
+                    return code >= 200 && code < 300;
+                });
     }
 
     private ObjectNode jsonMsg(String message) {
@@ -132,63 +138,53 @@ public class ContestApiController extends Controller {
             return completedFuture(badRequest(jsonMsg("Your contest must have at least one judge")));
         }
 
-        return CompletableFuture.supplyAsync(() -> {
-            HttpGet programCheckReq = new HttpGet(
-                    "https://www.khanacademy.org/api/labs/scratchpads/" + programId + "?projection=%7B%22id%22%3A1%7D");
-            try (CloseableHttpResponse programCheckRes = httpclient.execute(programCheckReq)) {
-                try {
-                    int code = programCheckRes.getStatusLine().getStatusCode();
-                    if (code < 200 || code >= 300) {
+        return programExists(programId)
+                .thenApplyAsync(exists -> {
+                    if (!exists) {
                         return badRequest(jsonMsg("Could not find a program with that id"));
                     }
-                } finally {
-                    programCheckReq.releaseConnection();
-                }
-            } catch (IOException e) {
-                Logger.error(e.getMessage(), e);
-                return internalServerError(jsonMsg("Internal server error"));
-            }
 
-            try (Connection connection = db.getConnection(true)) {
-                try (PreparedStatement checkStmt = connection
-                        .prepareStatement("SELECT COUNT(*) AS num FROM contests WHERE program_id = ?")) {
-                    checkStmt.setLong(1, programId);
-                    try (ResultSet checkRes = checkStmt.executeQuery()) {
-                        if (checkRes.next()) {
-                            if (checkRes.getLong("num") > 0) {
-                                return badRequest(
-                                        jsonMsg(String.format("A contest with program id %d already exists", programId)));
+                    try (Connection connection = db.getConnection(true)) {
+                        try (PreparedStatement checkStmt = connection
+                                .prepareStatement("SELECT COUNT(*) AS num FROM contests WHERE program_id = ?")) {
+                            checkStmt.setLong(1, programId);
+                            try (ResultSet checkRes = checkStmt.executeQuery()) {
+                                if (checkRes.next()) {
+                                    if (checkRes.getLong("num") > 0) {
+                                        return badRequest(
+                                                jsonMsg(String.format("A contest with program id %d already exists", programId)));
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-                for (int id : judgeIds) {
-                    try (PreparedStatement checkUsersStmt = connection
-                            .prepareStatement("SELECT id, kaid, level, name FROM users WHERE id = ? LIMIT 1")) {
-                        checkUsersStmt.setInt(1, id);
-                        try (ResultSet checkRes = checkUsersStmt.executeQuery()) {
-                            if (checkRes.next()) {
-                                User judge = new User();
-                                judge.setId(checkRes.getInt("id"));
-                                judge.setKaid(checkRes.getString("kaid"));
-                                judge.setName(checkRes.getString("name"));
-                                judge.setLevel(UserLevel.values()[checkRes.getInt("level")]);
-                                judges.add(judge);
-                            } else {
-                                return badRequest(jsonMsg(String.format("A user with the id %d does not exist", id)));
+                        for (int id : judgeIds) {
+                            try (PreparedStatement checkUsersStmt = connection
+                                    .prepareStatement("SELECT id, kaid, level, name FROM users WHERE id = ? LIMIT 1")) {
+                                checkUsersStmt.setInt(1, id);
+                                try (ResultSet checkRes = checkUsersStmt.executeQuery()) {
+                                    if (checkRes.next()) {
+                                        User judge = new User();
+                                        judge.setId(checkRes.getInt("id"));
+                                        judge.setKaid(checkRes.getString("kaid"));
+                                        judge.setName(checkRes.getString("name"));
+                                        judge.setLevel(UserLevel.values()[checkRes.getInt("level")]);
+                                        judges.add(judge);
+                                    } else {
+                                        return badRequest(jsonMsg(String.format("A user with the id %d does not exist", id)));
+                                    }
+                                }
                             }
                         }
-                    }
-                }
 
-                Contest contest = user.createContest(name, description, programId, new Date(endDate), criteria,
-                        brackets, judges, connection);
-                return contest == null ? badRequest(jsonMsg("Bad request")) : ok(contest.asJson());
-            } catch (SQLException e) {
-                Logger.error(e.getMessage(), e);
-                return internalServerError(jsonMsg("Internal server error"));
-            }
-        }, httpCtx).exceptionally(this::internalServerErrorApiCallback);
+                        Contest contest = user.createContest(name, description, programId, new Date(endDate), criteria,
+                                brackets, judges, connection);
+                        return contest == null ? badRequest(jsonMsg("Bad request")) : ok(contest.asJson());
+                    } catch (SQLException e) {
+                        Logger.error(e.getMessage(), e);
+                        return internalServerError(jsonMsg("Internal server error"));
+                    }
+                }, dbCtx)
+                .exceptionally(this::internalServerErrorApiCallback);
     }
 
     public CompletionStage<Result> getContest(int id) {
@@ -603,37 +599,29 @@ public class ContestApiController extends Controller {
             return completedFuture(forbidden(jsonMsg("Forbidden")));
         }
 
-        return CompletableFuture.supplyAsync(() -> {
-            HttpGet programCheckReq = new HttpGet(
-                    "https://www.khanacademy.org/api/labs/scratchpads/" + programId + "?projection=%7B%22id%22%3A1%7D");
-            try (CloseableHttpResponse programCheckRes = httpclient.execute(programCheckReq)) {
-                int code = programCheckRes.getStatusLine().getStatusCode();
-                if (code < 200 || code >= 300) {
-                    return badRequest(jsonMsg("Could not find a program with that id"));
-                }
-            } catch (IOException e) {
-                Logger.error(e.getMessage(), e);
-                return internalServerError(jsonMsg("Internal server error"));
-            }
+        return programExists(programId)
+                .thenApplyAsync(exists -> {
+                    if (!exists) {
+                        return badRequest(jsonMsg("Could not find a program with that id"));
+                    }
 
-            try (Connection connection = db.getConnection(true)) {
-                Contest contest = user.getContestById(id, connection);
+                    try (Connection connection = db.getConnection(true)) {
+                        Contest contest = user.getContestById(id, connection);
 
-                if (contest == null) {
-                    return notFound(jsonMsg(String.format("Contest with id %d does not exist", id)));
-                }
+                        if (contest == null) {
+                            return notFound(jsonMsg(String.format("Contest with id %d does not exist", id)));
+                        }
 
-                InsertedEntry entry = contest.addEntry(programId, connection);
+                        InsertedEntry entry = contest.addEntry(programId, connection);
 
-                Logger.error(entry.asJson().toString());
-
-                return entry == null ? internalServerError(jsonMsg("Internal server error"))
-                        : (entry.getIsNew() ? ok(entry.asJson()) : badRequest(jsonMsg("That entry was already inserted")));
-            } catch (SQLException e) {
-                Logger.error(e.getMessage(), e);
-                return internalServerError(jsonMsg("Internal server error"));
-            }
-        }, httpCtx).exceptionally(this::internalServerErrorApiCallback);
+                        return entry == null ? internalServerError(jsonMsg("Internal server error"))
+                                : (entry.getIsNew() ? ok(entry.asJson()) : badRequest(jsonMsg("That entry was already inserted")));
+                    } catch (SQLException e) {
+                        Logger.error(e.getMessage(), e);
+                        return internalServerError(jsonMsg("Internal server error"));
+                    }
+                }, dbCtx)
+                .exceptionally(this::internalServerErrorApiCallback);
     }
 
     public CompletionStage<Result> deleteEntry(int contestId, int id) {
@@ -694,37 +682,37 @@ public class ContestApiController extends Controller {
 
         return CompletableFuture.supplyAsync(() -> {
             try (Connection connection = db.getConnection(true)) {
-                Contest contest = user.getContestById(id, connection);
-                if (contest == null) {
-                    return notFound(jsonMsg("That contest doesn't exist"));
-                }
-
-                List<Long> programIds = new ArrayList<>();
-                Iterator<ArrayListExceptions<Long>> entryFetcher = new SpinOffIter(contest.getProgramId());
-                while (entryFetcher.hasNext()) {
-                    ArrayListExceptions<Long> iteration = entryFetcher.next();
-                    if (iteration.successful())
-                        programIds.addAll(iteration);
-                    else {
-                        Logger.error("Error", iteration.getExceptions().get(0));
-                        return internalServerError(jsonMsg("Internal server error"));
-                    }
-                }
-
-                ObjectMapper jsonMapper = new ObjectMapper();
-                ArrayNode returnJson = jsonMapper.createArrayNode();
-                List<InsertedEntry> insertedEntries = contest.addEntries(programIds, connection);
-                for (InsertedEntry entry : insertedEntries) {
-                    if (entry.getIsNew())
-                        returnJson.add(entry.asJson());
-                }
-
-                return ok(returnJson);
+                return user.getContestById(id, connection);
             } catch (SQLException e) {
                 Logger.error("Error", e);
-                return internalServerError(jsonMsg("Internal server error"));
+                return null;
             }
-        }, httpCtx).exceptionally(this::internalServerErrorApiCallback);
+        }, dbCtx).thenCompose(contest -> {
+            if (contest == null) {
+                return completedFuture(notFound(jsonMsg("That contest doesn't exist")));
+            }
+
+            return loader.load(contest.getProgramId())
+                    .thenApplyAsync(spinOffsRes -> {
+                        if (spinOffsRes.isOk()) {
+                            List<Long> spinOffs = spinOffsRes.get();
+                            try (Connection connection = db.getConnection(true)) {
+                                ObjectMapper jsonMapper = new ObjectMapper();
+                                ArrayNode returnJson = jsonMapper.createArrayNode();
+                                List<InsertedEntry> insertedEntries = contest.addEntries(spinOffs, connection);
+                                for (InsertedEntry entry : insertedEntries) {
+                                    if (entry.getIsNew())
+                                        returnJson.add(entry.asJson());
+                                }
+                                return ok(returnJson);
+                            } catch (Exception e) {
+                                return internalServerErrorApiCallback(e);
+                            }
+                        } else {
+                            return internalServerErrorApiCallback(spinOffsRes.getErr());
+                        }
+                    }, dbCtx);
+        }).exceptionally(this::internalServerErrorApiCallback);
     }
 
     public CompletionStage<Result> replaceCriteria(int id) {

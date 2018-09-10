@@ -2,7 +2,6 @@ package models;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.http.client.utils.URIBuilder;
 import play.libs.Json;
 import play.mvc.Http.Session;
 
@@ -319,8 +318,7 @@ public class User {
     }
 
     public String profileUrl() {
-        return new URIBuilder().setScheme("https").setHost("www.khanacademy.org")
-                .setPath(String.format("/profile/%s", getKaid())).toString();
+        return String.format("https://www.khanacademy.org/profile/%s", getKaid());
     }
 
     /* GETTERS AND SETTERS */

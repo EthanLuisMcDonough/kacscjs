@@ -53,8 +53,8 @@ public class LoginController extends Controller {
         return b64Encoder.encodeToString(randomBytes).replaceAll("\\+", "-").replaceAll("\\/", "_");
     }
 
-    public String authURL(final String consumerKey, final String consumerSecret, final String oauthCallback) throws IOException, InterruptedException, ExecutionException {
-
+    public String authURL(final String consumerKey, final String consumerSecret, final String oauthCallback)
+            throws IOException, InterruptedException, ExecutionException {
         KAOAuth10aService kaservice = (KAOAuth10aService) new KAServiceBuilder(consumerKey)
                 .apiSecret(consumerSecret).callback(oauthCallback).build(KhanApi.instance());
 
