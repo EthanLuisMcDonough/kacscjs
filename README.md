@@ -9,7 +9,7 @@ Frontend: Gulp + MDLite
 3. `cd kacscjs`
 4. `npm install`
 5. `npm run build`
-6. Set up a MySQL server and run schema.sql
+6. Set up a MySQL server and run schema.sql (make sure to change the initial admin's kaid)
 7. Open SBT by running `sbt`
 8. `playGenerateSecret`
 9. Open conf/application.conf
