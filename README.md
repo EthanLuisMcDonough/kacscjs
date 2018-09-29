@@ -17,6 +17,16 @@ Frontend: Gulp + MDLite
 10. Finish filling out all other fields in application.conf that are set to `"changeme"`
 11. `run` to run the app in dev mode
 
+### Features
+* Multiple contests can run at once.
+* Custom judging panels, criteria, and brackets for each contest.
+* Easy entry management.
+* Weighted criteria.
+* Advanced admin tools.
+* Multiple admins can be added.
+* Contest editing and deletion.
+
+
 ### Screenshots
 ![Contests page](screenshots/contests.png)
 ![Contest desctption page](screenshots/description.png)
